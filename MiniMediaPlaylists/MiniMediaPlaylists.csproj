@@ -1,0 +1,51 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <OutputType>Exe</OutputType>
+        <TargetFramework>net8.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <Folder Include="Models\Deezer\" />
+      <Folder Include="Models\SubSonic\" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <PackageReference Include="CliFx" Version="2.3.6" />
+      <PackageReference Include="Dapper" Version="2.1.66" />
+      <PackageReference Include="dbup-postgresql" Version="6.0.3" />
+      <PackageReference Include="FuzzySharp" Version="2.0.2" />
+      <PackageReference Include="Npgsql" Version="9.0.3" />
+      <PackageReference Include="Polly" Version="8.6.1" />
+      <PackageReference Include="Quartz" Version="3.14.0" />
+      <PackageReference Include="RestSharp" Version="112.1.0" />
+      <PackageReference Include="Spectre.Console" Version="0.50.0" />
+      <PackageReference Include="SpotifyAPI.Web" Version="7.2.1" />
+      <PackageReference Include="SubSonicMedia" Version="1.0.5-beta.1" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <Content Include="..\.dockerignore">
+        <Link>.dockerignore</Link>
+      </Content>
+    </ItemGroup>
+
+    <ItemGroup>
+      <None Update="DbScripts\20250705 playlist tables.sql">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
+      <None Update="DbScripts\20250706 plex tables.sql">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
+      <None Update="DbScripts\20250706 spotify tables.sql">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
+      <None Update="DbScripts\20250710 update spotify tables.sql">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
+    </ItemGroup>
+
+</Project>
