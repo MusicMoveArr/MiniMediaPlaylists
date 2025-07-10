@@ -47,7 +47,7 @@ services:
 ```
 
 # Pull Spotify playlists
-Personally I would say, since the first authentication with Spotify requires now a HTTPS connection, create a account at [n](https://ngrok.com)
+Personally I would say, since the first authentication with Spotify requires now a HTTPS connection, create a account at https://ngrok.com
 
 After the first authentication, the brower is no longer required, default listening port for localhost callback is 5000
 ```
