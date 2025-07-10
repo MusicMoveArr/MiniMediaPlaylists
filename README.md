@@ -75,7 +75,7 @@ dotnet MiniMediaPlaylists.dll pullplex \
 --token xxxxxxxxxxxx
 ```
 
-#sync Plex To Navidrome
+# sync Plex To Navidrome
 ```
 dotnet MiniMediaPlaylists.dll sync \
 --from-service "plex \
@@ -86,7 +86,7 @@ dotnet MiniMediaPlaylists.dll sync \
 --to-subsonic-password xxxxxxxxxxxx
 ```
 
-#sync Spotify To Navidrome
+# sync Spotify To Navidrome
 ```
 dotnet MiniMediaPlaylists.dll sync \
 --from-service "spotify \
@@ -97,7 +97,7 @@ dotnet MiniMediaPlaylists.dll sync \
 --to-subsonic-password xxxxxxxxxxxx
 ```
 
-#sync Spotify To Plex
+# sync Spotify To Plex
 ```
 dotnet MiniMediaPlaylists.dll sync \
 --from-service "spotify \
@@ -107,7 +107,7 @@ dotnet MiniMediaPlaylists.dll sync \
 --to-plex-token xxxxxxxxxxxx
 ```
 
-#sync Navidrome To Spotify
+# sync Navidrome To Spotify
 ```
 dotnet MiniMediaPlaylists.dll sync \
 --from-service "subsonic \
