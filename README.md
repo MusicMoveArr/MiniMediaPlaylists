@@ -32,7 +32,7 @@ This example will pull the plex playlists every 6 hours and playlists that have 
 ```
 services:
   minimediaplaylists:
-    image: musicmovearr/minimediaplaylists:main
+    image: musicmovearr/minimediaplaylists:latest
     container_name: minimediaplaylists
     restart: unless-stopped
     environment:
