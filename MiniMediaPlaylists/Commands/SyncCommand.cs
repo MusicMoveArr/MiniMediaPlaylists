@@ -51,6 +51,18 @@ public class SyncPlexCommand : ICommand
         EnvironmentVariable = "SYNC_FROM_SUBSONIC_PASSWORD")]
     public string FromSubSonicPassword { get; init; }
     
+    [CommandOption("from-skip-playlists",
+        Description = "Skip to sync by playlist names.",
+        IsRequired = false,
+        EnvironmentVariable = "SYNC_FROM_SKIP_PLAYLISTS")]
+    public List<string> FromSkipPlaylists { get; init; } = new List<string>();
+    
+    [CommandOption("from-skip-prefix-playlists",
+        Description = "Skip to sync by playlists that start with prefix(es).",
+        IsRequired = false,
+        EnvironmentVariable = "SYNC_FROM_SKIP_PREFIX_PLAYLISTS")]
+    public List<string> FromSkipPrefixPlaylists { get; init; } = new List<string>();
+    
     [CommandOption("to-service", 
         Description = "Sync to the selected service.", 
         EnvironmentVariable = "SYNC_TO_SERVICE",
@@ -100,6 +112,25 @@ public class SyncPlexCommand : ICommand
         EnvironmentVariable = "SYNC_MATCHPERCENTAGE")]
     public int MatchPercentage { get; init; } = 90;
 
+    [CommandOption("like-playlist-name",
+        Description = "The name of the like/favorite songs playlist, when using this setting it will like/favorite tracks instead of adding them to a target playlist.",
+        IsRequired = false,
+        EnvironmentVariable = "SYNC_LIKE_PLAYLIST_NAME")]
+    public string LikePlaylistName { get; init; }
+
+    [CommandOption("force-add-track",
+        Description = "Ignore thinking a song was already added to the playlist and try again anyway, useful for recovering backups.",
+        IsRequired = false,
+        EnvironmentVariable = "SYNC_FORCE_ADD_TRACK")]
+    public bool ForceAddTrack { get; init; }
+
+    [CommandOption("deep-search",
+        Description = "If the desired track cannot be found with the normal search method, we'll do a automated search ourself going through the artists, albums to find it.",
+        IsRequired = false,
+        EnvironmentVariable = "SYNC_DEEP_SEARCH")]
+    public bool DeepSearchThroughArtist { get; init; }
+
+
     public async ValueTask ExecuteAsync(IConsole console)
     {
         var handler = new SyncCommandHandler(ConnectionString);
@@ -111,6 +142,8 @@ public class SyncPlexCommand : ICommand
             FromPlexToken = FromPlexToken,
             FromSubSonicUsername = FromSubSonicUsername,
             FromSubSonicPassword = FromSubSonicPassword,
+            FromSkipPlaylists = FromSkipPlaylists,
+            FromSkipPrefixPlaylists = FromSkipPrefixPlaylists,
             
             ToService = ToService,
             ToName = ToName,
@@ -120,7 +153,10 @@ public class SyncPlexCommand : ICommand
             ToSubSonicUsername = ToSubSonicUsername,
             ToSubSonicPassword = ToSubSonicPassword,
             
-            MatchPercentage = MatchPercentage
+            MatchPercentage = MatchPercentage,
+            LikePlaylistName = LikePlaylistName,
+            ForceAddTrack = ForceAddTrack,
+            DeepSearchThroughArtist = DeepSearchThroughArtist,
         };
 
         await handler.SyncPlaylists(syncConfig);

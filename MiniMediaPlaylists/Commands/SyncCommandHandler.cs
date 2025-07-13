@@ -25,13 +25,21 @@ public class SyncCommandHandler
 
         var fromPlaylists = await _fromProvider.GetPlaylistsAsync(syncConfiguration.FromName);
         var toPlaylists = await _toProvider.GetPlaylistsAsync(syncConfiguration.ToName);
-        fromPlaylists.Reverse();
+        
         if (!string.IsNullOrWhiteSpace(syncConfiguration.FromPlaylistName))
         {
             fromPlaylists = fromPlaylists
                 .Where(playlist => string.Equals(playlist.Name, syncConfiguration.FromPlaylistName))
                 .ToList();
         }
+        
+        fromPlaylists = fromPlaylists
+            .Where(playlist => !syncConfiguration.FromSkipPlaylists.Contains(playlist.Name))
+            .ToList();
+        
+        fromPlaylists = fromPlaylists
+            .Where(playlist => !syncConfiguration.FromSkipPrefixPlaylists.Any(prefix => playlist.Name.StartsWith(prefix)))
+            .ToList();
         
         if (!string.IsNullOrWhiteSpace(syncConfiguration.ToPlaylistName))
         {
@@ -45,7 +53,6 @@ public class SyncCommandHandler
             Console.WriteLine($"No playlists found in '{syncConfiguration.FromService}' named '{syncConfiguration.FromPlaylistName}'");
             return;
         }
-        
         
         await AnsiConsole.Progress()
             .HideCompleted(true)
@@ -71,6 +78,7 @@ public class SyncCommandHandler
                     var toPlayList = toPlaylists.FirstOrDefault(playlist => 
                         string.Equals(playlist.Name, syncConfiguration.ToPlaylistPrefix + fromPlaylist.Name));
 
+                    bool isLikePlaylist = string.Equals(fromPlaylist.Name, syncConfiguration.LikePlaylistName);
                     if (toPlayList == null)
                     {
                         //create non-existing playlist on "to" service
@@ -79,7 +87,9 @@ public class SyncCommandHandler
                     }
 
                     var fromTracks = await _fromProvider.GetPlaylistTracksAsync(syncConfiguration.FromName, fromPlaylist.Id);
-                    var toTracks = await _toProvider.GetPlaylistTracksAsync(syncConfiguration.ToName, toPlayList.Id);
+                    var toTracks =
+                        string.IsNullOrWhiteSpace(toPlayList?.Id) || isLikePlaylist ? [] :
+                        await _toProvider.GetPlaylistTracksAsync(syncConfiguration.ToName, toPlayList.Id);
 
                     var task = ctx.AddTask(Markup.Escape($"Processing Playlist '{fromPlaylist.Name}', 0 of {fromTracks.Count} processed"));
                     task.MaxValue = fromTracks.Count;
@@ -89,19 +99,21 @@ public class SyncCommandHandler
                         task.Value++;
                         try
                         {
-                            var toTrack = toTracks
-                                .Where(track => Fuzz.Ratio(track.ArtistName.ToLower(), fromTrack.ArtistName.ToLower()) >= syncConfiguration.MatchPercentage)
-                                .Where(track => Fuzz.Ratio(track.AlbumName.ToLower(), fromTrack.AlbumName.ToLower()) >= syncConfiguration.MatchPercentage)
-                                .Where(track => Fuzz.Ratio(track.Title.ToLower(), fromTrack.Title.ToLower()) >= syncConfiguration.MatchPercentage)
-                                .Where(track => FuzzyHelper.ExactNumberMatch(track.ArtistName, fromTrack.ArtistName))
-                                .Where(track => FuzzyHelper.ExactNumberMatch(track.AlbumName, fromTrack.AlbumName))
-                                .Where(track => FuzzyHelper.ExactNumberMatch(track.Title, fromTrack.Title))
-                                .FirstOrDefault();
-
-                            if (toTrack != null)
+                            if (!syncConfiguration.ForceAddTrack)
                             {
-                                //AnsiConsole.WriteLine(Markup.Escape($"Song already in playlist '{fromTrack.ArtistName} - {fromTrack.AlbumName} - {fromTrack.Title}'"));
-                                continue;
+                                var toTrackExists = toTracks
+                                    .Where(track => Fuzz.Ratio(track.ArtistName.ToLower(), fromTrack.ArtistName.ToLower()) >= syncConfiguration.MatchPercentage)
+                                    .Where(track => Fuzz.Ratio(track.AlbumName.ToLower(), fromTrack.AlbumName.ToLower()) >= syncConfiguration.MatchPercentage)
+                                    .Where(track => Fuzz.Ratio(track.Title.ToLower(), fromTrack.Title.ToLower()) >= syncConfiguration.MatchPercentage)
+                                    .Where(track => FuzzyHelper.ExactNumberMatch(track.ArtistName, fromTrack.ArtistName))
+                                    .Where(track => FuzzyHelper.ExactNumberMatch(track.AlbumName, fromTrack.AlbumName))
+                                    .Any(track => FuzzyHelper.ExactNumberMatch(track.Title, fromTrack.Title));
+
+                                if (toTrackExists)
+                                {
+                                    //AnsiConsole.WriteLine(Markup.Escape($"Song already in playlist '{fromTrack.ArtistName} - {fromTrack.AlbumName} - {fromTrack.Title}'"));
+                                    continue;
+                                }
                             }
 
                             var searchResults = await _toProvider.SearchTrackAsync(
@@ -110,33 +122,38 @@ public class SyncCommandHandler
                                 fromTrack.AlbumName,
                                 fromTrack.Title);
 
-                            var foundTracks = searchResults
-                                .Select(track => new
-                                {
-                                    Track = track,
-                                    ArtistMatch = Fuzz.Ratio(track.ArtistName.ToLower(), fromTrack.ArtistName.ToLower()),
-                                    AlbumMatch = Fuzz.Ratio(track.AlbumName.ToLower(), fromTrack.AlbumName.ToLower()),
-                                    TitleMatch = Fuzz.Ratio(track.Title.ToLower(), fromTrack.Title.ToLower())
-                                })
-                                .OrderByDescending(track => track.ArtistMatch)
-                                .ThenByDescending(track => track.AlbumMatch)
-                                .ThenByDescending(track => track.TitleMatch)
-                                .ToList();
+                            var foundTrack = FindTrack(searchResults, syncConfiguration, fromTrack);
 
-                            var foundTrack = foundTracks
-                                .Where(track => track.ArtistMatch >= syncConfiguration.MatchPercentage)
-                                .Where(track => track.AlbumMatch >= syncConfiguration.MatchPercentage)
-                                .Where(track => track.TitleMatch >= syncConfiguration.MatchPercentage)
-                                .Where(track => FuzzyHelper.ExactNumberMatch(track.Track.ArtistName, fromTrack.ArtistName))
-                                .Where(track => FuzzyHelper.ExactNumberMatch(track.Track.AlbumName, fromTrack.AlbumName))
-                                .Where(track => FuzzyHelper.ExactNumberMatch(track.Track.Title, fromTrack.Title))
-                                .Select(track => track.Track)
-                                .FirstOrDefault();
+                            bool foundWithDeepSearch = false;
+                            if (foundTrack == null && syncConfiguration.DeepSearchThroughArtist)
+                            {
+                                searchResults = await _toProvider.DeepSearchTrackAsync(
+                                    syncConfiguration.ToName,
+                                    fromTrack.ArtistName,
+                                    fromTrack.AlbumName,
+                                    fromTrack.Title);
+                                foundTrack = FindTrack(searchResults, syncConfiguration, fromTrack);
+                                foundWithDeepSearch = foundTrack != null;
+                            }
 
                             if (foundTrack != null)
                             {
-                                await _toProvider.AddTrackToPlaylistAsync(syncConfiguration.ToName, toPlayList.Id, foundTrack.Id);
-                                AnsiConsole.WriteLine(Markup.Escape($"Added song to playlist '{fromTrack.ArtistName} - {fromTrack.AlbumName} - {fromTrack.Title}'"));
+                                if (isLikePlaylist)
+                                {
+                                    if (await _toProvider.LikeTrackAsync(syncConfiguration.ToName, foundTrack, fromTrack.LikeRating))
+                                    {
+                                        AnsiConsole.WriteLine(Markup.Escape($"Liked song with rating '{fromTrack.LikeRating}' '{fromTrack.ArtistName} - {fromTrack.AlbumName} - {fromTrack.Title}' {(foundWithDeepSearch ? "found with deep search" : "")}"));
+                                    }
+                                    else
+                                    {
+                                        AnsiConsole.WriteLine(Markup.Escape($"Failed to like the song, '{fromTrack.ArtistName} - {fromTrack.AlbumName} - {fromTrack.Title}'"));
+                                    }
+                                }
+                                else
+                                {
+                                    await _toProvider.AddTrackToPlaylistAsync(syncConfiguration.ToName, toPlayList.Id, foundTrack);
+                                    AnsiConsole.WriteLine(Markup.Escape($"Added song to playlist '{fromTrack.ArtistName} - {fromTrack.AlbumName} - {fromTrack.Title}' {(foundWithDeepSearch ? "found with deep search" : "")}"));
+                                }
                             }
                             else
                             {
@@ -153,15 +170,46 @@ public class SyncCommandHandler
                     totalProgressTask.Description(Markup.Escape($"Processing Playlists {totalProgressTask.Value} of {fromPlaylists.Count} processed"));
                 });
             });
-    }  
+    }
+
+    private GenericTrack? FindTrack(
+        List<GenericTrack> searchResults,
+        SyncConfiguration syncConfiguration,
+        GenericTrack fromTrack)
+    {
+        var foundTracks = searchResults
+            .Select(track => new
+            {
+                Track = track,
+                ArtistMatch = Fuzz.Ratio(track.ArtistName.ToLower(), fromTrack.ArtistName.ToLower()),
+                AlbumMatch = Fuzz.Ratio(track.AlbumName.ToLower(), fromTrack.AlbumName.ToLower()),
+                TitleMatch = Fuzz.Ratio(track.Title.ToLower(), fromTrack.Title.ToLower())
+            })
+            .OrderByDescending(track => track.ArtistMatch)
+            .ThenByDescending(track => track.AlbumMatch)
+            .ThenByDescending(track => track.TitleMatch)
+            .ToList();
+
+        var foundTrack = foundTracks
+            .Where(track => track.ArtistMatch >= syncConfiguration.MatchPercentage)
+            .Where(track => track.AlbumMatch >= syncConfiguration.MatchPercentage)
+            .Where(track => track.TitleMatch >= syncConfiguration.MatchPercentage)
+            .Where(track => FuzzyHelper.ExactNumberMatch(track.Track.ArtistName, fromTrack.ArtistName))
+            .Where(track => FuzzyHelper.ExactNumberMatch(track.Track.AlbumName, fromTrack.AlbumName))
+            .Where(track => FuzzyHelper.ExactNumberMatch(track.Track.Title, fromTrack.Title))
+            .Select(track => track.Track)
+            .FirstOrDefault();
+
+        return foundTrack;
+    }
 
     private IProviderService GetProviderServiceTo(SyncConfiguration syncConfiguration, string connectionString)
     {
         switch (syncConfiguration.ToService)
         {
-            case "subsonic": return new SubSonicService(connectionString,syncConfiguration.ToSubSonicUsername, syncConfiguration.ToSubSonicPassword);
+            case "subsonic": return new SubSonicService(connectionString,syncConfiguration.ToSubSonicUsername, syncConfiguration.ToSubSonicPassword, syncConfiguration);
             case "plex": return new PlexService(connectionString, syncConfiguration);
-            case "spotify": return new SpotifyService(connectionString);
+            case "spotify": return new SpotifyService(connectionString, syncConfiguration);
             default:
                 throw new System.NotImplementedException(syncConfiguration.ToService);
         }
@@ -171,9 +219,9 @@ public class SyncCommandHandler
     {
         switch (syncConfiguration.FromService)
         {
-            case "subsonic": return new SubSonicService(connectionString,syncConfiguration.FromSubSonicUsername, syncConfiguration.FromSubSonicPassword);
+            case "subsonic": return new SubSonicService(connectionString,syncConfiguration.FromSubSonicUsername, syncConfiguration.FromSubSonicPassword, syncConfiguration);
             case "plex": return new PlexService(connectionString, syncConfiguration);
-            case "spotify": return new SpotifyService(connectionString);
+            case "spotify": return new SpotifyService(connectionString, syncConfiguration);
             default:
                 throw new System.NotImplementedException(syncConfiguration.FromService);
         }

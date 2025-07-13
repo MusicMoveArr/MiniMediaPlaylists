@@ -8,11 +8,13 @@ namespace MiniMediaPlaylists.Services;
 public class SpotifyService : IProviderService
 {
     private readonly SpotifyRepository _spotifyRepository;
+    private readonly SyncConfiguration _syncConfiguration;
     private SpotifyClient _spotifyClient;
     
-    public SpotifyService(string connectionString)
+    public SpotifyService(string connectionString, SyncConfiguration syncConfiguration)
     {
         _spotifyRepository = new SpotifyRepository(connectionString);
+        _syncConfiguration = syncConfiguration;
     }
     
     public async Task<List<GenericPlaylist>> GetPlaylistsAsync(string ownerId)
@@ -55,10 +57,11 @@ public class SpotifyService : IProviderService
             .Select(track => 
                 new GenericTrack
             {
-                Id = track.Uri,
+                Id = track.Id,
                 AlbumName = track.Album.Name,
                 ArtistName = track.Artists.FirstOrDefault().Name,
-                Title = track.Name
+                Title = track.Name,
+                Uri = track.Uri
             })
             .Where(track => !string.IsNullOrWhiteSpace(track.Id))
             .Where(track => !string.IsNullOrWhiteSpace(track.AlbumName))
@@ -69,15 +72,33 @@ public class SpotifyService : IProviderService
         return tracks;
     }
 
-    public async Task<bool> AddTrackToPlaylistAsync(string serverUrl, string playlistId, string trackId)
+    public async Task<List<GenericTrack>> DeepSearchTrackAsync(string serverUrl, string artist, string album, string title)
+    {
+        return new List<GenericTrack>();
+    }
+
+    public async Task<bool> AddTrackToPlaylistAsync(string serverUrl, string playlistId, GenericTrack track)
     {
         if (_spotifyClient == null)
         {
             _spotifyClient = await GetSpotifyClientAync(serverUrl);
         }
 
-        var request = new PlaylistAddItemsRequest([trackId]);
+        var request = new PlaylistAddItemsRequest([track.Uri]);
         await _spotifyClient.Playlists.AddItems(playlistId, request);
+        return true;
+    }
+
+    public async Task<bool> LikeTrackAsync(string serverUrl, GenericTrack track, float rating)
+    {
+        if (_spotifyClient == null)
+        {
+            _spotifyClient = await GetSpotifyClientAync(serverUrl);
+        }
+
+        LibrarySaveTracksRequest request = new LibrarySaveTracksRequest([track.Id]);
+        var ha = await _spotifyClient.Library.SaveTracks(request);
+
         return true;
     }
 

@@ -31,11 +31,17 @@ public class PullSubSonicCommand : ICommand
         IsRequired = true,
         EnvironmentVariable = "PULLSUBSONIC_PASSWORD")]
     public required string Password { get; init; }
+    
+    [CommandOption("liked-playlist-name", 
+        Description = "Save the liked songs into a specific playlist name, in SubSonic liked songs are not in a playlist.", 
+        IsRequired = false,
+        EnvironmentVariable = "PULLSUBSONIC_LIKED_PLAYLIST_NAME")]
+    public string LikedSongsPlaylistName { get; init; }
 
     public async ValueTask ExecuteAsync(IConsole console)
     {
         var handler = new PullSubSonicCommandHandler(ConnectionString);
 
-        await handler.PullSubSonicPlaylists(ServerUrl, Username, Password);
+        await handler.PullSubSonicPlaylists(ServerUrl, Username, Password, LikedSongsPlaylistName);
     }
 }

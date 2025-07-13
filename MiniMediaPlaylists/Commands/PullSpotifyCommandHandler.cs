@@ -1,4 +1,5 @@
 using System.Net;
+using System.Security.Cryptography;
 using System.Text;
 using MiniMediaPlaylists.Repositories;
 using Spectre.Console;
@@ -19,9 +20,9 @@ public class PullSpotifyCommandHandler
         string spotifySecretId, 
         string authRedirectUri, 
         string authCallbackListener,
-        string ownerName)
+        string ownerName,
+        string likedSongsPlaylistName)
     {
-
         var spotifyOwnerModel = await _spotifyRepository.GetOwnerByNameAsync(ownerName);
         SpotifyClient spotifyClient;
         string refreshToken = string.Empty;
@@ -71,13 +72,35 @@ public class PullSpotifyCommandHandler
                 {
                     allPlaylists.Add(playlist);
                 }
-                
+
                 var totalProgressTask = ctx.AddTask(Markup.Escape($"Processing Playlists 0 of {allPlaylists.Count} processed"));
                 totalProgressTask.MaxValue = allPlaylists.Count;
-                
-                foreach (var playlist in allPlaylists.Take(1))
+
+                if (string.IsNullOrWhiteSpace(likedSongsPlaylistName))
                 {
+                    var savedTracks = new List<SavedTrack>();
+                    await foreach (var savedTrack in spotifyClient.Paginate(await spotifyClient.Library.GetTracks()))
+                    {
+                        savedTracks.Add(savedTrack);
+                    }
                     
+                    string uniqueHashId =
+                        BitConverter.ToString(SHA256.Create()
+                                .ComputeHash(Encoding.UTF8.GetBytes(likedSongsPlaylistName)))
+                            .Replace("-", string.Empty);
+                    
+                    allPlaylists.Add(new FullPlaylist
+                    {
+                        Id = uniqueHashId,
+                        Href = string.Empty,
+                        Name = likedSongsPlaylistName,
+                        //Tracks = savedTracks
+                        //Owner = currentUser
+                    });
+                }
+                
+                foreach (var playlist in allPlaylists)
+                {
                     try
                     {
                         await _spotifyRepository.UpsertPlaylistAsync(playlist.Id,
@@ -164,7 +187,9 @@ public class PullSpotifyCommandHandler
                 Scopes.PlaylistReadCollaborative,
                 Scopes.UserReadPrivate,
                 Scopes.PlaylistModifyPublic,
-                Scopes.PlaylistModifyPrivate
+                Scopes.PlaylistModifyPrivate,
+                Scopes.UserLibraryModify,
+                Scopes.UserLibraryRead
             }
         };
         var uri = loginRequest.ToUri();

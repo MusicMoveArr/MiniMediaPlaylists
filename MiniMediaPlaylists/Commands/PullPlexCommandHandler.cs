@@ -58,7 +58,6 @@ public class PullPlexCommandHandler
                      
                          var tracks = await plexApiService.GetPlaylistTracksAsync(serverUrl, token, playlist.RatingKey);
          
-                         
                          if (tracks?.MediaContainer?.Metadata == null ||
                              tracks?.MediaContainer?.Metadata?.Any() == false)
                          {

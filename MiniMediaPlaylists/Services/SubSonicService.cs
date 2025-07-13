@@ -1,3 +1,4 @@
+using MiniMediaPlaylists.Commands;
 using MiniMediaPlaylists.Interfaces;
 using MiniMediaPlaylists.Models;
 using MiniMediaPlaylists.Repositories;
@@ -9,12 +10,14 @@ namespace MiniMediaPlaylists.Services;
 public class SubSonicService : IProviderService
 {
     private readonly SubSonicRepository _subSonicRepository;
+    private readonly SyncConfiguration _syncConfiguration;
     private readonly string _username;
     private readonly string _password;
 
-    public SubSonicService(string connectionString, string username, string password)
+    public SubSonicService(string connectionString, string username, string password, SyncConfiguration syncConfiguration)
     {
         _subSonicRepository = new SubSonicRepository(connectionString);
+        _syncConfiguration = syncConfiguration;
         _username = username;
         _password = password;
     }
@@ -67,7 +70,12 @@ public class SubSonicService : IProviderService
         }).ToList();
     }
 
-    public async Task<bool> AddTrackToPlaylistAsync(string serverUrl, string playlistId, string trackId)
+    public async Task<List<GenericTrack>> DeepSearchTrackAsync(string serverUrl, string artist, string album, string title)
+    {
+        return new List<GenericTrack>();
+    }
+
+    public async Task<bool> AddTrackToPlaylistAsync(string serverUrl, string playlistId, GenericTrack track)
     {
         var connection = new SubsonicConnectionInfo(
             serverUrl: serverUrl,
@@ -76,8 +84,32 @@ public class SubSonicService : IProviderService
         );
         using var client = new SubsonicClient(connection);
 
-        await client.Playlists.UpdatePlaylistAsync(playlistId, songIdsToAdd: [trackId]);
+        await client.Playlists.UpdatePlaylistAsync(playlistId, songIdsToAdd: [track.Id]);
 
         return true;
+    }
+
+    public async Task<bool> LikeTrackAsync(string serverUrl, GenericTrack track, float rating)
+    {
+        var connection = new SubsonicConnectionInfo(
+            serverUrl: serverUrl,
+            username: _username,
+            password: _password
+        );
+        using var client = new SubsonicClient(connection);
+
+        var starResponse = await client.Annotation.StarAsync(track.Id);
+        if (rating > 0)
+        {
+            rating = _syncConfiguration.FromService switch
+            {
+                SyncConfiguration.ServicePlex => rating / 2F,
+                SyncConfiguration.ServiceSubsonic => rating,
+                _ => rating
+            };
+            await client.Annotation.SetRatingAsync(track.Id, (int)rating);
+        }
+        
+        return starResponse.IsSuccess;
     }
 }

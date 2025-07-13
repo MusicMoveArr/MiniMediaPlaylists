@@ -9,5 +9,7 @@ public interface IProviderService
     Task<GenericPlaylist> CreatePlaylistAsync(string serverUrl, string name);
     Task<List<GenericTrack>> GetPlaylistTracksAsync(string serverUrl, string playlistId);
     Task<List<GenericTrack>> SearchTrackAsync(string serverUrl, string artist, string album, string title);
-    Task<bool> AddTrackToPlaylistAsync(string serverUrl, string playlistId, string trackId);
+    Task<List<GenericTrack>> DeepSearchTrackAsync(string serverUrl, string artist, string album, string title);
+    Task<bool> AddTrackToPlaylistAsync(string serverUrl, string playlistId, GenericTrack track);
+    Task<bool> LikeTrackAsync(string serverUrl, GenericTrack track, float rating);
 }

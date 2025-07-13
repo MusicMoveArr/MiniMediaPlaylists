@@ -125,7 +125,8 @@ public class SubSonicRepository
         string path,
         long size,
         int year,
-        DateTime addedAt)
+        DateTime addedAt,
+        int userRating)
     {
         if (string.IsNullOrWhiteSpace(album))
         {
@@ -169,9 +170,10 @@ public class SubSonicRepository
                                                    Size,
                                                    Year,
                                                    IsRemoved,
-                                                   AddedAt)
+                                                   AddedAt,
+                                                   UserRating)
             VALUES (@trackId, @playlistId, @serverId, @album, @albumId, @artist, @artistId,
-                    @duration, @title, @path, @size, @year, @isRemoved, @addedAt)
+                    @duration, @title, @path, @size, @year, @isRemoved, @addedAt, @userRating)
             ON CONFLICT (Id, PlayListId, ServerId)
             DO UPDATE set
                 album = EXCLUDED.album,
@@ -183,7 +185,8 @@ public class SubSonicRepository
                 path = EXCLUDED.path,
                 size = EXCLUDED.size,
                 year = EXCLUDED.year,
-                addedAt = EXCLUDED.addedAt";
+                addedAt = EXCLUDED.addedAt,
+                UserRating = EXCLUDED.UserRating";
 
         await using var conn = new NpgsqlConnection(_connectionString);
 
@@ -203,7 +206,8 @@ public class SubSonicRepository
                 size,
                 year,
                 isRemoved = false,
-                addedAt
+                addedAt,
+                userRating
             });
     }
     
@@ -231,7 +235,8 @@ public class SubSonicRepository
                              track.id as Id,
                              track.Artist as ArtistName,
                              track.Album as AlbumName,
-                             track.title as Title
+                             track.title as Title,
+                             track.UserRating as LikeRating
                          from playlists_subsonic_server pps 
                          join playlists_subsonic_playlist list on list.serverid = pps.id 
                          join playlists_subsonic_playlist_track track on track.serverid = pps.id and track.playlistid = list.id

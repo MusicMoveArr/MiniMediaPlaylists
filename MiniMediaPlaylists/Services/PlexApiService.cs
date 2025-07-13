@@ -54,16 +54,32 @@ public class PlexApiService
         string url = $"{serverUrl}/library/search?query={Uri.EscapeDataString(searchTerm)}&searchTypes=music&X-Plex-Token={token}";
         using RestClient client = new RestClient(url);
         AsyncRetryPolicy retryPolicy = GetRetryPolicy();
+        RestRequest request = new RestRequest();
+        
+        return await retryPolicy.ExecuteAsync(async () =>
+        {
+            return await client.GetAsync<PlexMediaContainerResponse<SearchResultEntity<PlexTrackModel>>>(request);
+        });
+    }
+    public async Task<PlexMediaContainerResponse<PlexTrackModel>?> GetChildrenByRatingKeyAsync(string serverUrl, string token, string ratingKey)
+    {
+        string url = $"{serverUrl}/library/metadata/{ratingKey}/children?X-Plex-Token={token}";
+        using RestClient client = new RestClient(url);
+        AsyncRetryPolicy retryPolicy = GetRetryPolicy();
         
         return await retryPolicy.ExecuteAsync(async () =>
         {
             RestRequest request = new RestRequest();
-            return await client.GetAsync<PlexMediaContainerResponse<SearchResultEntity<PlexTrackModel>>>(request);
+            return await client.GetAsync<PlexMediaContainerResponse<PlexTrackModel>>(request);
         });
     }
-    public async Task<PlexMediaContainerResponse<PlexTrackModel>?> GetTracksByAlbumRatingKeyAsync(string serverUrl, string token, string albumRatingKey)
+    public async Task<PlexMediaContainerResponse<PlexTrackModel>?> GetSingleEPsByArtistRatingKeyAsync(
+        string serverUrl, 
+        string token, 
+        string artistRatingKey,
+        int sectionId)
     {
-        string url = $"{serverUrl}/library/metadata/{albumRatingKey}/children?X-Plex-Token={token}";
+        string url = $"{serverUrl}/library/sections/{sectionId}/all?artist.id={artistRatingKey}&type=9&format=EP,Single&X-Plex-Token={token}";
         using RestClient client = new RestClient(url);
         AsyncRetryPolicy retryPolicy = GetRetryPolicy();
         
@@ -103,6 +119,19 @@ public class PlexApiService
         {
             RestRequest request = new RestRequest();
             return await client.PostAsync<PlexMediaContainerResponse<PlexPlaylistModel>>(request);
+        });
+    }
+    
+    public async Task LikeTrackAsync(string serverUrl, string token, string trackRatingKey, int userRating)
+    {
+        string url = $"{serverUrl}/:/rate?key={trackRatingKey}&identifier=com.plexapp.plugins.library&rating={userRating}&X-Plex-Token={token}";
+        using RestClient client = new RestClient(url);
+        AsyncRetryPolicy retryPolicy = GetRetryPolicy();
+        
+        await retryPolicy.ExecuteAsync(async () =>
+        {
+            RestRequest request = new RestRequest();
+            await client.PutAsync(request);
         });
     }
     

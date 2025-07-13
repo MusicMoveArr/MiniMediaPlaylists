@@ -1,7 +1,11 @@
+using System.Security.Cryptography;
+using System.Text;
 using MiniMediaPlaylists.Repositories;
 using Spectre.Console;
 using SubSonicMedia;
 using SubSonicMedia.Models;
+using SubSonicMedia.Responses.Playlists.Models;
+using SubSonicMedia.Responses.Search.Models;
 
 namespace MiniMediaPlaylists.Commands;
 
@@ -13,7 +17,11 @@ public class PullSubSonicCommandHandler
         _subSonicRepository = new SubSonicRepository(connectionString);
     }
 
-    public async Task PullSubSonicPlaylists(string serverUrl, string username, string password)
+    public async Task PullSubSonicPlaylists(
+        string serverUrl, 
+        string username, 
+        string password, 
+        string likedSongsPlaylistName)
     {
         var connection = new SubsonicConnectionInfo(
             serverUrl: serverUrl,
@@ -42,10 +50,31 @@ public class PullSubSonicCommandHandler
             {
                 var totalProgressTask = ctx.AddTask(Markup.Escape($"Processing Playlists 0 of {playlists.Playlists.Playlist.Count} processed"));
                 totalProgressTask.MaxValue = playlists.Playlists.Playlist.Count;
+
+                string genLikedPlaylistName = string.Empty;
+                
+                if (!string.IsNullOrWhiteSpace(likedSongsPlaylistName))
+                {
+                    string uniqueHashId =
+                        BitConverter.ToString(SHA256.Create()
+                            .ComputeHash(Encoding.UTF8.GetBytes(likedSongsPlaylistName)))
+                            .Replace("-", string.Empty);
+                    
+                    genLikedPlaylistName = $"#{uniqueHashId}";
+                    playlists.Playlists.Playlist.Insert(0, new PlaylistSummary
+                    {
+                        Changed = DateTime.Now,
+                        Created = DateTime.Now,
+                        Duration = 0,
+                        Id = genLikedPlaylistName,
+                        Name = likedSongsPlaylistName,
+                        Public = false,
+                        SongCount = 0
+                    });
+                }
                 
                 foreach (var playlist in playlists.Playlists.Playlist)
                 {
-                    
                     try
                     {
                         await _subSonicRepository.UpsertPlaylistAsync(playlist.Id, 
@@ -58,15 +87,26 @@ public class PullSubSonicCommandHandler
                             playlist.Owner,
                             playlist.Public,
                             playlist.SongCount);
-            
-                        var tracks = client.Playlists.GetPlaylistAsync(playlist.Id).Result.Playlist.Entry;
+
+                        List<Song> tracks = new List<Song>();
+                        if (!string.IsNullOrWhiteSpace(genLikedPlaylistName) &&
+                            string.Equals(genLikedPlaylistName, playlist.Id))
+                        {
+                            //personally I don't get the UserRating/AverageRating, it's always NULL
+                            //for now only "starring" or liking the song on another service works
+                            var starredTracks = await client.Browsing.GetStarredAsync();
+                            tracks = starredTracks.Starred.Song.ToList();
+                        }
+                        else
+                        {
+                            tracks = client.Playlists.GetPlaylistAsync(playlist.Id).Result.Playlist.Entry;
+                        }
+                        
                         var task = ctx.AddTask(Markup.Escape($"Processing Playlist '{playlist.Name}', 0 of {tracks.Count} processed"));
                         task.MaxValue = tracks.Count;
-                        
+
                         foreach (var track in tracks)
                         {
-                            task.Value++;
-                            
                             await _subSonicRepository.UpsertPlaylistTrackAsync(
                                 track.Id,
                                 serverId,
@@ -80,7 +120,10 @@ public class PullSubSonicCommandHandler
                                 track.Path,
                                 track.Size,
                                 track.Year ?? 0,
-                                DateTime.Now);
+                                DateTime.Now,
+                                track.UserRating ?? 0);
+                            task.Increment(1);
+                            task.Description(Markup.Escape($"Processing Playlist '{playlist.Name}', {task.Value} of {tracks.Count} processed"));
                         }
                     }
                     catch (Exception e)

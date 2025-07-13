@@ -26,17 +26,17 @@ public class PullSPlexCommand : ICommand
         EnvironmentVariable = "PULLPLEX_TOKEN")]
     public required string Token { get; init; }
 
-    [CommandOption("limit",
+    [CommandOption("track-limit",
         Description = "Set the playlist track limit to pull.",
         IsRequired = false,
-        EnvironmentVariable = "PULLPLEX_LIMIT")]
-    public int Limit { get; init; } = 5000;
+        EnvironmentVariable = "PULLPLEX_TRACK_LIMIT")]
+    public int TrackLimit { get; init; } = 5000;
     
 
     public async ValueTask ExecuteAsync(IConsole console)
     {
         var handler = new PullPlexCommandHandler(ConnectionString);
 
-        await handler.PullPlexPlaylists(ServerUrl, Token, Limit);
+        await handler.PullPlexPlaylists(ServerUrl, Token, TrackLimit);
     }
 }

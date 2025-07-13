@@ -1,0 +1,1 @@
+alter table playlists_subsonic_playlist_track add column UserRating int default 0;

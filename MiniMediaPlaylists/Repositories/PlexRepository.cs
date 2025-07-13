@@ -292,7 +292,8 @@ public class PlexRepository
                              track.ratingkey as Id,
                              track.GrandParentTitle as ArtistName,
                              track.ParentTitle as AlbumName,
-                             track.title as Title
+                             track.title as Title,
+                             track.UserRating as LikeRating
                          from playlists_plex_server pps 
                          join playlists_plex_playlist list on list.serverid = pps.id 
                          join playlists_plex_playlist_track track on track.serverid = pps.id and track.playlistid = list.ratingkey
@@ -335,5 +336,22 @@ public class PlexRepository
         
         return updatedModel.AddedAt == DateTimeOffset.FromUnixTimeSeconds(addedAt).Date && 
                updatedModel.UpdatedAt == DateTimeOffset.FromUnixTimeSeconds(updatedAt).Date;
+    }
+    public async Task<List<int>> GetLibrarySectionIdsAsync(string serverUrl)
+    {
+        string query = @"select distinct
+                             track.librarysectionid
+                         from playlists_plex_server pps 
+                         join playlists_plex_playlist list on list.serverid = pps.id 
+                         join playlists_plex_playlist_track track on track.serverid = pps.id and track.playlistid = list.ratingkey
+                         where pps.serverurl = @serverUrl";
+
+        await using var conn = new NpgsqlConnection(_connectionString);
+
+        return (await conn.QueryAsync<int>(query, 
+            param: new
+            {
+                serverUrl
+            })).ToList();
     }
 }

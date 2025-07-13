@@ -43,11 +43,17 @@ public class PullSpotifyCommand : ICommand
         IsRequired = true,
         EnvironmentVariable = "PULLSPOTIFY_OWNER_NAME")]
     public required string OwnerName { get; init; }
+    
+    [CommandOption("liked-playlist-name", 
+        Description = "Save the liked songs into a specific playlist name, in Spotify liked songs are in 'Liked Songs' which is a fake playlist.", 
+        IsRequired = false,
+        EnvironmentVariable = "PULLSPOTIFY_LIKED_PLAYLIST_NAME")]
+    public string LikedSongsPlaylistName { get; init; }
 
     public async ValueTask ExecuteAsync(IConsole console)
     {
         var handler = new PullSpotifyCommandHandler(ConnectionString);
 
-        await handler.PullSpotifyPlaylists(SpotifyClientId, SpotifySecretId, AuthRedirectUri, AuthCallbackListener, OwnerName);
+        await handler.PullSpotifyPlaylists(SpotifyClientId, SpotifySecretId, AuthRedirectUri, AuthCallbackListener, OwnerName, LikedSongsPlaylistName);
     }
 }
