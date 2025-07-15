@@ -63,6 +63,12 @@ public class SyncPlexCommand : ICommand
         EnvironmentVariable = "SYNC_FROM_SKIP_PREFIX_PLAYLISTS")]
     public List<string> FromSkipPrefixPlaylists { get; init; } = new List<string>();
     
+    [CommandOption("from-tidal-country-code", 
+        Description = "Tidal's CountryCode (e.g. US, FR, NL, DE etc).",
+        IsRequired = false,
+        EnvironmentVariable = "SYNC_FROM_TIDAL_COUNTRY_CODE")]
+    public string FromTidalCountryCode { get; init; }
+    
     [CommandOption("to-service", 
         Description = "Sync to the selected service.", 
         EnvironmentVariable = "SYNC_TO_SERVICE",
@@ -105,6 +111,12 @@ public class SyncPlexCommand : ICommand
         IsRequired = false,
         EnvironmentVariable = "SYNC_TO_SUBSONIC_PASSWORD")]
     public string ToSubSonicPassword { get; init; }
+    
+    [CommandOption("to-tidal-country-code", 
+        Description = "Tidal's CountryCode (e.g. US, FR, NL, DE etc).",
+        IsRequired = false,
+        EnvironmentVariable = "SYNC_TO_TIDAL_COUNTRY_CODE")]
+    public string ToTidalCountryCode { get; init; }
 
     [CommandOption("match-percentage",
         Description = "The required amount of % to match a playlist track.",
@@ -144,6 +156,7 @@ public class SyncPlexCommand : ICommand
             FromSubSonicPassword = FromSubSonicPassword,
             FromSkipPlaylists = FromSkipPlaylists,
             FromSkipPrefixPlaylists = FromSkipPrefixPlaylists,
+            FromTidalCountryCode = FromTidalCountryCode,
             
             ToService = ToService,
             ToName = ToName,
@@ -152,6 +165,7 @@ public class SyncPlexCommand : ICommand
             ToPlexToken = ToPlexToken,
             ToSubSonicUsername = ToSubSonicUsername,
             ToSubSonicPassword = ToSubSonicPassword,
+            ToTidalCountryCode = ToTidalCountryCode,
             
             MatchPercentage = MatchPercentage,
             LikePlaylistName = LikePlaylistName,

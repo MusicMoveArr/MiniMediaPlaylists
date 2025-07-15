@@ -5,6 +5,7 @@ public class SyncConfiguration
     public const string ServicePlex = "plex";
     public const string ServiceSpotify = "spotify";
     public const string ServiceSubsonic = "subsonic";
+    public const string ServiceTidal = "tidal";
     
     public required string FromService { get; init; }
     public required string FromName { get; init; }
@@ -14,6 +15,7 @@ public class SyncConfiguration
     public required string FromSubSonicPassword { get; init; }
     public required List<string> FromSkipPlaylists { get; init; }
     public required List<string> FromSkipPrefixPlaylists { get; init; }
+    public required string FromTidalCountryCode { get; init; }
     
     public required string ToService { get; init; }
     public required string ToName { get; init; }
@@ -22,6 +24,7 @@ public class SyncConfiguration
     public required string ToPlexToken { get; init; }
     public required string ToSubSonicUsername { get; init; }
     public required string ToSubSonicPassword { get; init; }
+    public required string ToTidalCountryCode { get; init; }
     
     public required int MatchPercentage { get; init; }
     public required string LikePlaylistName { get; init; }

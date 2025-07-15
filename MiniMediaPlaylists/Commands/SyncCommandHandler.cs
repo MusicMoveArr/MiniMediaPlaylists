@@ -1,3 +1,4 @@
+using System.Reflection.Metadata.Ecma335;
 using FuzzySharp;
 using MiniMediaPlaylists.Helpers;
 using MiniMediaPlaylists.Interfaces;
@@ -96,7 +97,6 @@ public class SyncCommandHandler
 
                     foreach (var fromTrack in fromTracks)
                     {
-                        task.Value++;
                         try
                         {
                             if (!syncConfiguration.ForceAddTrack)
@@ -164,6 +164,10 @@ public class SyncCommandHandler
                         {
                             AnsiConsole.WriteLine(Markup.Escape($"Error: {e.Message}"));
                         }
+                        
+                        task.Value++;
+                        task.Description(Markup.Escape(Markup.Escape($"Processing Playlist '{fromPlaylist.Name}', {task.Value} of {fromTracks.Count} processed")));
+                        
                     }
 
                     totalProgressTask.Value++;
@@ -210,6 +214,7 @@ public class SyncCommandHandler
             case "subsonic": return new SubSonicService(connectionString,syncConfiguration.ToSubSonicUsername, syncConfiguration.ToSubSonicPassword, syncConfiguration);
             case "plex": return new PlexService(connectionString, syncConfiguration);
             case "spotify": return new SpotifyService(connectionString, syncConfiguration);
+            case "tidal": return new TidalService(connectionString, syncConfiguration);
             default:
                 throw new System.NotImplementedException(syncConfiguration.ToService);
         }
@@ -222,6 +227,7 @@ public class SyncCommandHandler
             case "subsonic": return new SubSonicService(connectionString,syncConfiguration.FromSubSonicUsername, syncConfiguration.FromSubSonicPassword, syncConfiguration);
             case "plex": return new PlexService(connectionString, syncConfiguration);
             case "spotify": return new SpotifyService(connectionString, syncConfiguration);
+            case "tidal": return new TidalService(connectionString, syncConfiguration);
             default:
                 throw new System.NotImplementedException(syncConfiguration.FromService);
         }

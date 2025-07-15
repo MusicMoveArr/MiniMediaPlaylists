@@ -49,6 +49,9 @@
       <None Update="DbScripts\20250711 update subsonic tables.sql">
         <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       </None>
+      <None Update="DbScripts\20250714 tidal tables.sql">
+        <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+      </None>
     </ItemGroup>
 
 </Project>
