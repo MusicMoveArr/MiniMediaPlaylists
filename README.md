@@ -5,6 +5,8 @@ Synchronize the way you want it easily from Spotify To Navidrome, Plex To Spotif
 
 No other tool could do this yet so some one had to make this...
 
+As a "extra feature" you can sync to yourself to "restore" a "backup" in qoutes because by creating weird combinations you can even sync to the same service, at the bottom of the page is a restore example
+
 Loving the work I do? buy me a coffee https://buymeacoffee.com/musicmovearr
 
 # Roadmap
@@ -147,7 +149,7 @@ dotnet MiniMediaPlaylists.dll pulltidal \
 --authentication-redirect-uri https://xxxxxx.ngrok-free.app/callback
 ```
 
-# sync Plex To Navidrome
+# Sync Plex To Navidrome
 ```
 dotnet MiniMediaPlaylists.dll sync \
 --from-service plex \
@@ -158,7 +160,7 @@ dotnet MiniMediaPlaylists.dll sync \
 --to-subsonic-password xxxxxxxxxxxx
 ```
 
-# sync Spotify To Navidrome
+# Sync Spotify To Navidrome
 ```
 dotnet MiniMediaPlaylists.dll sync \
 --from-service spotify \
@@ -169,7 +171,7 @@ dotnet MiniMediaPlaylists.dll sync \
 --to-subsonic-password xxxxxxxxxxxx
 ```
 
-# sync Spotify To Plex
+# Sync Spotify To Plex
 ```
 dotnet MiniMediaPlaylists.dll sync \
 --from-service spotify \
@@ -179,7 +181,7 @@ dotnet MiniMediaPlaylists.dll sync \
 --to-plex-token xxxxxxxxxxxx
 ```
 
-# sync Navidrome To Spotify
+# Sync Navidrome To Spotify
 ```
 dotnet MiniMediaPlaylists.dll sync \
 --from-service subsonic \
@@ -188,7 +190,7 @@ dotnet MiniMediaPlaylists.dll sync \
 --to-name "user_xxxxxxx"
 ```
 
-# sync Plex To Tidal
+# Sync Plex To Tidal
 ```
 dotnet MiniMediaPlaylists.dll sync \
 --from-service plex \
@@ -196,6 +198,25 @@ dotnet MiniMediaPlaylists.dll sync \
 --to-service tidal \
 --to-name "user_12345" \
 --to-tidal-country-code US
+```
+
+# Sync Plex To Plex (like restoring a backup)
+Set the --to-name/--from-name the exact same
+
+--force-add-track, optin is the trick to restore the backup, bypassing the database if it was synced to the playlist already
+
+--deep-search, will give you a higher chance on success for finding back the missing/deleted songs, for me it went from ~80% success to 99% to restoring the "backup"
+
+```
+dotnet MiniMediaPlaylists.dll sync \
+--from-service plex \
+--from-name "http://plex.xxxxxxxxxxxx" \
+--to-service plex \
+--to-name "http://plex.xxxxxxxxxxxx" \
+--to-plex-token xxxxxxxxxxxx \
+--like-playlist-name "❤️ Tracks" \
+--force-add-track \
+--deep-search
 ```
 
 
