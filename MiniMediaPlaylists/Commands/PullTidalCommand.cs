@@ -15,13 +15,13 @@ public class PullTidalCommand : ICommand
     public required string ConnectionString { get; init; }
     
     [CommandOption("client-id", 
-        Description = "Tidal username for authentication.", 
+        Description = "Tidal Client Id, to use for the Tidal API.",
         IsRequired = true,
         EnvironmentVariable = "PULLTIDAL_CLIENT_ID")]
     public required string TidalClientId { get; init; }
     
     [CommandOption("secret-id", 
-        Description = "Tidal username for authentication.", 
+        Description = "Tidal Secret Id, to use for the Tidal API.", 
         IsRequired = true,
         EnvironmentVariable = "PULLTIDAL_SECRET_ID")]
     public required string TidalSecretId { get; init; }
