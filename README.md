@@ -16,6 +16,7 @@ Loving the work I do? buy me a coffee https://buymeacoffee.com/musicmovearr
 1. Spotify
 2. Plex
 3. SubSonic (includes Navidrome)
+4. Tidal
 
 # Features
 1. Postgres support
@@ -27,7 +28,8 @@ Loving the work I do? buy me a coffee https://buymeacoffee.com/musicmovearr
 1. PullPlex - Pull all your Plex playlists
 2. PullSpotify - Pull all your spotify playlists
 3. PullSubsonic - Pull all your SubSonic playlists
-4. Sync - Sync playlists between 2 services
+4. PullTidal - Pull all your Tidal playlists
+5. Sync - Sync playlists between 2 services
 
 # Docker-Compose example
 This example will pull the plex playlists every 6 hours and playlists that have over 5000 tracks won't get pulled
@@ -67,6 +69,14 @@ services:
 | PullSubsonic | --username | SubSonic username for authentication. | xxxxxxx |
 | PullSubsonic | --password | SubSonic password for authentication. | xxxxxxx |
 | PullSubsonic | --liked-playlist-name | Save the liked songs into a specific playlist name, in SubSonic liked songs are not in a playlist. | Liked Songs |
+| PullTidal | --connection-string | ConnectionString for Postgres database. | Host=192.168.1.2;Username=postgres;Password=postgres;Database=minimedia |
+| PullTidal | --client-id | Tidal Client Id, to use for the Tidal API. | xxxxxx |
+| PullTidal | --secret-id | Tidal Secret Id, to use for the Tidal API. | xxxxxx |
+| PullTidal | --authentication-redirect-uri | The redirect uri to use for Authentication. | https://xxxxxx.ngrok-free.app/callback |
+| PullTidal | --country-code | Tidal's CountryCode (e.g. US, FR, NL, DE etc). | US |
+| PullTidal | --owner-name | The name of the owner who'se account this belongs to. | user_12345 |
+| PullTidal | --authentication-callback-listener | The callback listener url to use for Authentication. | http://*:5000/callback/ |
+| PullTidal | --liked-playlist-name | Save the liked songs into a specific playlist name, in Tidal liked songs are not in a playlist. | Liked Songs |
 | Sync | --connection-string | ConnectionString for Postgres database. | Host=192.168.1.2;Username=postgres;Password=postgres;Database=minimedia |
 | Sync | --from-service | Sync from the selected service. | plex |
 | Sync | --from-name | Sync from either the name (username etc) or url. | http://xxxxxxx/ |
@@ -76,6 +86,8 @@ services:
 | Sync | --from-subsonic-password | SubSonic password for authentication. | xxxxxxx |
 | Sync | --from-skip-playlists | Skip to sync by playlist names. | Disliked Songs |
 | Sync | --from-skip-prefix-playlists | Skip to sync by playlists that start with prefix(es). | # |
+| Sync | --from-skip-prefix-playlists | Skip to sync by playlists that start with prefix(es). | # |
+| Sync | --from-tidal-country-code | Tidal's CountryCode (e.g. US, FR, NL, DE etc). | US |
 | Sync | --to-service | Sync to the selected service. | spotify |
 | Sync | --to-name | Sync to either the name or url. | user_1234 |
 | Sync | --to-playlist-name | Sync to this specific playlist name. | Some Playlist |
@@ -83,6 +95,7 @@ services:
 | Sync | --to-plex-token | Plex token for authentication. | xxxxxxx |
 | Sync | --to-subsonic-username | SubSonic username for authentication. | xxxxxxx |
 | Sync | --to-subsonic-password | SubSonic password for authentication. | xxxxxxx |
+| Sync | --to-tidal-country-code | Tidal's CountryCode (e.g. US, FR, NL, DE etc). | US |
 | Sync | --match-percentage | The required amount of % to match a playlist track. | 90 |
 | Sync | --like-playlist-name | The name of the like/favorite songs playlist, when using this setting it will like/favorite tracks instead of adding them to a target playlist. | Liked Songs |
 | Sync | --force-add-track | Ignore thinking a song was already added to the playlist and try again anyway, useful for recovering backups. | true |
@@ -92,6 +105,7 @@ services:
 Personally I would say, since the first authentication with Spotify requires now a HTTPS connection, create a account at https://ngrok.com
 
 After the first authentication, the brower is no longer required, default listening port for localhost callback is 5000
+
 ```
 dotnet MiniMediaPlaylists.dll pullspotify
 --owner-name xxxxxxxxxxxx \
@@ -117,10 +131,26 @@ dotnet MiniMediaPlaylists.dll pullplex \
 --token xxxxxxxxxxxx
 ```
 
+# Pull Tidal playlists
+
+This example expects you to have ngrok setup, use the command "ngrok http 5000" for the default listener at port 5000
+
+Just like the spotify example
+
+```
+dotnet MiniMediaPlaylists.dll pulltidal \
+--url "http://xxxxxxxxxxxx" \
+--client-id xxxxxxxxxxxx \
+--secret-id xxxxxxxxxxxx \
+--country-code US \
+--owner-name user_12345 \
+--authentication-redirect-uri https://xxxxxx.ngrok-free.app/callback
+```
+
 # sync Plex To Navidrome
 ```
 dotnet MiniMediaPlaylists.dll sync \
---from-service "plex \
+--from-service plex \
 --from-name "http://plex.xxxxxxxxxxxx" \
 --to-service subsonic \
 --to-name "http://xxxxxxxxxxxx" \
@@ -131,7 +161,7 @@ dotnet MiniMediaPlaylists.dll sync \
 # sync Spotify To Navidrome
 ```
 dotnet MiniMediaPlaylists.dll sync \
---from-service "spotify \
+--from-service spotify \
 --from-name "user_xxxxxxx" \
 --to-service subsonic \
 --to-name "http://xxxxxxxxxxxx" \
@@ -142,7 +172,7 @@ dotnet MiniMediaPlaylists.dll sync \
 # sync Spotify To Plex
 ```
 dotnet MiniMediaPlaylists.dll sync \
---from-service "spotify \
+--from-service spotify \
 --from-name "user_xxxxxxx" \
 --to-service subsonic \
 --to-name "http://plex.xxxxxxxxxxxx" \
@@ -152,10 +182,20 @@ dotnet MiniMediaPlaylists.dll sync \
 # sync Navidrome To Spotify
 ```
 dotnet MiniMediaPlaylists.dll sync \
---from-service "subsonic \
+--from-service subsonic \
 --from-name "http://xxxxxxxxxxxx" \
 --to-service spotify \
 --to-name "user_xxxxxxx"
+```
+
+# sync Plex To Tidal
+```
+dotnet MiniMediaPlaylists.dll sync \
+--from-service plex \
+--from-name "http://plex.xxxxxxxxxxxx" \
+--to-service tidal \
+--to-name "user_12345" \
+--to-tidal-country-code US
 ```
 
 
