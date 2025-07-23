@@ -8,6 +8,10 @@
         <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
     </PropertyGroup>
 
+    <PropertyGroup>
+        <RuntimeIdentifier>linux-x64</RuntimeIdentifier>
+    </PropertyGroup>
+
     <ItemGroup>
       <Folder Include="Models\Deezer\" />
       <Folder Include="Models\SubSonic\" />
@@ -51,6 +55,9 @@
       </None>
       <None Update="DbScripts\20250714 tidal tables.sql">
         <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+      </None>
+      <None Update="DbScripts\20250721 jellyfin tables.sql">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       </None>
     </ItemGroup>
 

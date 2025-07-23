@@ -215,6 +215,7 @@ public class SyncCommandHandler
             case "plex": return new PlexService(connectionString, syncConfiguration);
             case "spotify": return new SpotifyService(connectionString, syncConfiguration);
             case "tidal": return new TidalService(connectionString, syncConfiguration);
+            case "jellyfin": return new JellyfinService(connectionString, syncConfiguration);
             default:
                 throw new System.NotImplementedException(syncConfiguration.ToService);
         }
@@ -228,6 +229,7 @@ public class SyncCommandHandler
             case "plex": return new PlexService(connectionString, syncConfiguration);
             case "spotify": return new SpotifyService(connectionString, syncConfiguration);
             case "tidal": return new TidalService(connectionString, syncConfiguration);
+            case "jellyfin": return new JellyfinService(connectionString, syncConfiguration);
             default:
                 throw new System.NotImplementedException(syncConfiguration.FromService);
         }

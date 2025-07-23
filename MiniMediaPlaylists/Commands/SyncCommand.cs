@@ -51,6 +51,19 @@ public class SyncPlexCommand : ICommand
         EnvironmentVariable = "SYNC_FROM_SUBSONIC_PASSWORD")]
     public string FromSubSonicPassword { get; init; }
     
+    
+    [CommandOption("from-jellyfin-username", 
+        Description = "Jellyfin username for authentication.", 
+        IsRequired = false,
+        EnvironmentVariable = "SYNC_FROM_JELLYFIN_USERNAME")]
+    public string FromJellyfinUsername { get; init; }
+    
+    [CommandOption("from-jellyfin-password", 
+        Description = "Jellyfin password for authentication.", 
+        IsRequired = false,
+        EnvironmentVariable = "SYNC_FROM_JELLYFIN_PASSWORD")]
+    public string FromJellyfinPassword { get; init; }
+    
     [CommandOption("from-skip-playlists",
         Description = "Skip to sync by playlist names.",
         IsRequired = false,
@@ -112,6 +125,18 @@ public class SyncPlexCommand : ICommand
         EnvironmentVariable = "SYNC_TO_SUBSONIC_PASSWORD")]
     public string ToSubSonicPassword { get; init; }
     
+    [CommandOption("to-jellyfin-username", 
+        Description = "Jellyfin username for authentication.", 
+        IsRequired = false,
+        EnvironmentVariable = "SYNC_TO_JELLYFIN_USERNAME")]
+    public string ToJellyfinUsername { get; init; }
+    
+    [CommandOption("to-jellyfin-password", 
+        Description = "Jellyfin password for authentication.", 
+        IsRequired = false,
+        EnvironmentVariable = "SYNC_TO_JELLYFIN_PASSWORD")]
+    public string ToJellyfinPassword { get; init; }
+    
     [CommandOption("to-tidal-country-code", 
         Description = "Tidal's CountryCode (e.g. US, FR, NL, DE etc).",
         IsRequired = false,
@@ -154,6 +179,8 @@ public class SyncPlexCommand : ICommand
             FromPlexToken = FromPlexToken,
             FromSubSonicUsername = FromSubSonicUsername,
             FromSubSonicPassword = FromSubSonicPassword,
+            FromJellyfinUsername = FromJellyfinUsername,
+            FromJellyfinPassword = FromJellyfinPassword,
             FromSkipPlaylists = FromSkipPlaylists,
             FromSkipPrefixPlaylists = FromSkipPrefixPlaylists,
             FromTidalCountryCode = FromTidalCountryCode,
@@ -165,6 +192,8 @@ public class SyncPlexCommand : ICommand
             ToPlexToken = ToPlexToken,
             ToSubSonicUsername = ToSubSonicUsername,
             ToSubSonicPassword = ToSubSonicPassword,
+            ToJellyfinUsername = ToJellyfinUsername,
+            ToJellyfinPassword = ToJellyfinPassword,
             ToTidalCountryCode = ToTidalCountryCode,
             
             MatchPercentage = MatchPercentage,
