@@ -19,6 +19,7 @@ Loving the work I do? buy me a coffee https://buymeacoffee.com/musicmovearr
 2. Plex
 3. SubSonic (includes Navidrome)
 4. Tidal
+5. Jellyfin
 
 # Features
 1. Postgres support
@@ -27,11 +28,12 @@ Loving the work I do? buy me a coffee https://buymeacoffee.com/musicmovearr
 4. Cross-Sync the liked songs + the song ratings
 
 # Commands
-1. PullPlex - Pull all your Plex playlists
-2. PullSpotify - Pull all your spotify playlists
-3. PullSubsonic - Pull all your SubSonic playlists
-4. PullTidal - Pull all your Tidal playlists
-5. Sync - Sync playlists between 2 services
+1. Sync - Sync playlists between 2 services
+2. PullPlex - Pull all your Plex playlists
+3. PullSpotify - Pull all your spotify playlists
+4. PullSubsonic - Pull all your SubSonic playlists
+5. PullTidal - Pull all your Tidal playlists
+6. PullJellyfin  - Pull all your Jellyfin playlists
 
 # Docker-Compose example
 This example will pull the plex playlists every 6 hours and playlists that have over 5000 tracks won't get pulled
@@ -79,6 +81,11 @@ services:
 | PullTidal | --owner-name | The name of the owner who'se account this belongs to. | user_12345 |
 | PullTidal | --authentication-callback-listener | The callback listener url to use for Authentication. | http://*:5000/callback/ |
 | PullTidal | --liked-playlist-name | Save the liked songs into a specific playlist name, in Tidal liked songs are not in a playlist. | Liked Songs |
+| PullJellyfin | --connection-string | ConnectionString for Postgres database. | Host=192.168.1.2;Username=postgres;Password=postgres;Database=minimedia |
+| PullJellyfin | --url | Jellyfin server url. | http://xxxxxxx/ |
+| PullJellyfin | --username | Jellyfin username for authentication. | xxxxxxx |
+| PullJellyfin | --password | Jellyfin password for authentication. | xxxxxxx |
+| PullJellyfin | --favorite-playlist-name | Save the favorite songs into a specific playlist name, in Jellyfin liked songs are not in a playlist. | Favorites |
 | Sync | --connection-string | ConnectionString for Postgres database. | Host=192.168.1.2;Username=postgres;Password=postgres;Database=minimedia |
 | Sync | --from-service | Sync from the selected service. | plex |
 | Sync | --from-name | Sync from either the name (username etc) or url. | http://xxxxxxx/ |
@@ -86,6 +93,8 @@ services:
 | Sync | --from-plex-token | Plex token for authentication. | xxxxxxx |
 | Sync | --from-subsonic-username | SubSonic username for authentication. | xxxxxxx |
 | Sync | --from-subsonic-password | SubSonic password for authentication. | xxxxxxx |
+| Sync | --from-jellyfin-username | Jellyfin username for authentication. | xxxxxxx |
+| Sync | --from-jellyfin-password | Jellyfin password for authentication. | xxxxxxx |
 | Sync | --from-skip-playlists | Skip to sync by playlist names. | Disliked Songs |
 | Sync | --from-skip-prefix-playlists | Skip to sync by playlists that start with prefix(es). | # |
 | Sync | --from-skip-prefix-playlists | Skip to sync by playlists that start with prefix(es). | # |
@@ -97,6 +106,8 @@ services:
 | Sync | --to-plex-token | Plex token for authentication. | xxxxxxx |
 | Sync | --to-subsonic-username | SubSonic username for authentication. | xxxxxxx |
 | Sync | --to-subsonic-password | SubSonic password for authentication. | xxxxxxx |
+| Sync | --to-jellyfin-username | Jellyfin username for authentication. | xxxxxxx |
+| Sync | --to-jellyfin-password | Jellyfin password for authentication. | xxxxxxx |
 | Sync | --to-tidal-country-code | Tidal's CountryCode (e.g. US, FR, NL, DE etc). | US |
 | Sync | --match-percentage | The required amount of % to match a playlist track. | 90 |
 | Sync | --like-playlist-name | The name of the like/favorite songs playlist, when using this setting it will like/favorite tracks instead of adding them to a target playlist. | Liked Songs |
@@ -131,6 +142,16 @@ dotnet MiniMediaPlaylists.dll pullsubsonic \
 dotnet MiniMediaPlaylists.dll pullplex \
 --url "http://xxxxxxxxxxxx" \
 --token xxxxxxxxxxxx
+```
+
+# Pull Jellyfin playlists
+
+```
+dotnet MiniMediaPlaylists.dll pulljellyfin \
+--url "http://xxxxxxxxxxxx" \
+--username xxxxxxxxxxxx \
+--password xxxxxxxxxxxx \
+--favorite-playlist-name Favorites
 ```
 
 # Pull Tidal playlists
@@ -188,6 +209,17 @@ dotnet MiniMediaPlaylists.dll sync \
 --from-name "http://xxxxxxxxxxxx" \
 --to-service spotify \
 --to-name "user_xxxxxxx"
+```
+
+# Sync Navidrome To Jellyfin
+```
+dotnet MiniMediaPlaylists.dll sync \
+--from-service subsonic \
+--from-name "http://xxxxxxxxxxxx" \
+--to-service jellyfin \
+--to-name "user_xxxxxxx" \
+--to-jellyfin-username xxxxxxxxxxxx \
+--to-jellyfin-password xxxxxxxxxxxx
 ```
 
 # Sync Plex To Tidal
