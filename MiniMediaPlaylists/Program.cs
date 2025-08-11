@@ -19,7 +19,7 @@ public class Program
         
         if (!string.IsNullOrWhiteSpace(commandEnvironmentValue) && args?.Length == 0)
         {
-            ConsoleArguments = [ commandEnvironmentValue ];
+            ConsoleArguments = commandEnvironmentValue.Split(':', StringSplitOptions.RemoveEmptyEntries);
         }
 
         string? connectionString = GetConnectionString(args);

@@ -8,16 +8,19 @@ public class CronJob : IJob
 {
     public async Task Execute(IJobExecutionContext context)
     {
-        try
+        foreach (string command in Program.ConsoleArguments)
         {
-            await new CliApplicationBuilder()
-                .AddCommandsFromThisAssembly()
-                .Build()
-                .RunAsync(Program.ConsoleArguments);
-        }
-        catch (Exception e)
-        {
-            Console.WriteLine(e.Message);
+            try
+            {
+                await new CliApplicationBuilder()
+                    .AddCommandsFromThisAssembly()
+                    .Build()
+                    .RunAsync([command]);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.Message);
+            }
         }
     }
 }
