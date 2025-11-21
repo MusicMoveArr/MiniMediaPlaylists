@@ -192,6 +192,11 @@ public class PlexService : IProviderService
 
     public async Task<bool> LikeTrackAsync(string serverUrl, GenericTrack track, float rating)
     {
+        return false;
+    }
+
+    public async Task<bool> RateTrackAsync(string serverUrl, GenericTrack track, float rating)
+    {
         if (rating <= 0)
         {
             return false;

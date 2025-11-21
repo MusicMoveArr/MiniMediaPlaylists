@@ -97,9 +97,13 @@ public class SpotifyService : IProviderService
         }
 
         LibrarySaveTracksRequest request = new LibrarySaveTracksRequest([track.Id]);
-        var ha = await _spotifyClient.Library.SaveTracks(request);
 
-        return true;
+        return await _spotifyClient.Library.SaveTracks(request);
+    }
+
+    public async Task<bool> RateTrackAsync(string serverUrl, GenericTrack track, float rating)
+    {
+        return false;
     }
 
     private async Task<SpotifyClient> GetSpotifyClientAync(string ownerName)

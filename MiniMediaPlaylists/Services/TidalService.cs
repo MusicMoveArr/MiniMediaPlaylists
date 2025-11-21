@@ -132,6 +132,11 @@ public class TidalService : IProviderService
         return false;
     }
 
+    public async Task<bool> RateTrackAsync(string serverUrl, GenericTrack track, float rating)
+    {
+        return false;
+    }
+
     private async Task AuthenticateAsync()
     {
         if (_tidalApiService == null)

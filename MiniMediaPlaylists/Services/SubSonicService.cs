@@ -1,4 +1,5 @@
-using MiniMediaPlaylists.Commands;
+using FuzzySharp;
+using MiniMediaPlaylists.Helpers;
 using MiniMediaPlaylists.Interfaces;
 using MiniMediaPlaylists.Models;
 using MiniMediaPlaylists.Repositories;
@@ -59,7 +60,7 @@ public class SubSonicService : IProviderService
         using var client = new SubsonicClient(connection);
 
         string searchQuery = $"{artist} {title}";
-        var response = await client.Search.Search3Async(searchQuery);
+        var response = await client.Search.Search3Async(searchQuery, songCount: 200);
 
         return response.SearchResult.Songs.Select(track => new GenericTrack
         {
@@ -72,7 +73,97 @@ public class SubSonicService : IProviderService
 
     public async Task<List<GenericTrack>> DeepSearchTrackAsync(string serverUrl, string artist, string album, string title)
     {
-        return new List<GenericTrack>();
+        List<GenericTrack> trackList = new List<GenericTrack>();
+        var connection = new SubsonicConnectionInfo(
+            serverUrl: serverUrl,
+            username: _username,
+            password: _password
+        );
+
+        if (string.IsNullOrWhiteSpace(artist) || string.IsNullOrWhiteSpace(album) || string.IsNullOrWhiteSpace(title))
+        {
+            return trackList;
+        }
+        
+        using var client = new SubsonicClient(connection);
+        
+        //go through the list of artists
+        var artistSearchResponse = await client.Search.Search3Async(artist, songCount: 0, albumCount: 0, artistCount: 50);
+        for (int index = 50; index < 500; index += 50)
+        {
+            foreach (var artistResult in artistSearchResponse.SearchResult.Artists
+                         .Where(a => Fuzz.PartialRatio(a.Name.ToLower(), artist.ToLower()) >= _syncConfiguration.MatchPercentage)
+                         .Where(a => FuzzyHelper.ExactNumberMatch(a.Name, album)))
+            {
+                var artistInfo = await client.Browsing.GetArtistAsync(artistResult.Id);
+
+                var albumList = artistInfo.Artist.Album
+                    .Where(a => Fuzz.PartialRatio(a.Artist.ToLower(), artist.ToLower()) >= _syncConfiguration.MatchPercentage)
+                    .Where(a => FuzzyHelper.ExactNumberMatch(a.Name, album))
+                    .Where(a => Fuzz.Ratio(a.Name, album) >= _syncConfiguration.MatchPercentage)
+                    .ToList();
+
+                foreach (var albumSummary in albumList)
+                {
+                    var albumInfo = await client.Browsing.GetAlbumAsync(albumSummary.Id);
+                
+                    var tracks = albumInfo.Album.Song
+                        .Where(track => Fuzz.PartialRatio(track.Title.ToLower(), title.ToLower()) >= _syncConfiguration.MatchPercentage)
+                        .Where(track => FuzzyHelper.ExactNumberMatch(track.Title, title))
+                        .Select(track => new GenericTrack
+                        {
+                            Id = track.Id,
+                            Title = track.Title,
+                            AlbumName = track.Album,
+                            ArtistName = track.Artist,
+                            LikeRating = track.UserRating ?? 0
+                        })
+                        .ToList();
+                    trackList.AddRange(tracks);
+                }
+            }
+            
+            artistSearchResponse = await client.Search.Search3Async(artist, songCount: 0, albumCount: 0, artistCount: 50, artistOffset: index);
+            if (artistSearchResponse.SearchResult.ArtistCount == 0)
+            {
+                break;
+            }
+        }
+        
+        //go through the list of albums
+        var albumSearchResponse = await client.Search.Search3Async(album, songCount: 0, albumCount: 50, artistCount: 0);
+        for (int index = 50; index < 500; index += 50)
+        {
+            foreach (var albumResult in albumSearchResponse.SearchResult.Albums
+                         .Where(a => Fuzz.PartialRatio(a.Artist.ToLower(), artist.ToLower()) >= _syncConfiguration.MatchPercentage)
+                         .Where(a => FuzzyHelper.ExactNumberMatch(a.Name, album))
+                         .Where(a => Fuzz.Ratio(a.Name, album) >= _syncConfiguration.MatchPercentage))
+            {
+                var albumInfo = await client.Browsing.GetAlbumAsync(albumResult.Id);
+
+                var tracks = albumInfo.Album.Song
+                    .Where(track => Fuzz.PartialRatio(track.Title.ToLower(), title.ToLower()) >= _syncConfiguration.MatchPercentage)
+                    .Where(track => FuzzyHelper.ExactNumberMatch(track.Title, title))
+                    .Select(track => new GenericTrack
+                    {
+                        Id = track.Id,
+                        Title = track.Title,
+                        AlbumName = track.Album,
+                        ArtistName = track.Artist,
+                        LikeRating = track.UserRating ?? 0
+                    })
+                    .ToList();
+                trackList.AddRange(tracks);
+            }
+            
+            albumSearchResponse = await client.Search.Search3Async(album, songCount: 0, albumCount: 50, artistCount: 0, albumOffset: index);
+            if (albumSearchResponse.SearchResult.AlbumCount == 0)
+            {
+                break;
+            }
+        }
+        
+        return trackList;
     }
 
     public async Task<bool> AddTrackToPlaylistAsync(string serverUrl, string playlistId, GenericTrack track)
@@ -99,17 +190,29 @@ public class SubSonicService : IProviderService
         using var client = new SubsonicClient(connection);
 
         var starResponse = await client.Annotation.StarAsync(track.Id);
+        
+        return starResponse.IsSuccess;
+    }
+
+    public async Task<bool> RateTrackAsync(string serverUrl, GenericTrack track, float rating)
+    {
         if (rating > 0)
         {
+            var connection = new SubsonicConnectionInfo(
+                serverUrl: serverUrl,
+                username: _username,
+                password: _password
+            );
+            using var client = new SubsonicClient(connection);
             rating = _syncConfiguration.FromService switch
             {
                 SyncConfiguration.ServicePlex => rating / 2F,
                 SyncConfiguration.ServiceSubsonic => rating,
                 _ => rating
             };
-            await client.Annotation.SetRatingAsync(track.Id, (int)rating);
+            return (await client.Annotation.SetRatingAsync(track.Id, (int)rating)).IsSuccess;
         }
         
-        return starResponse.IsSuccess;
+        return false;
     }
 }

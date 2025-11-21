@@ -74,6 +74,12 @@ public class JellyfinService : IProviderService
     {
         var dbAuthInfo = await _jellyfinRepository.GetOwnerByNameAsync(_syncConfiguration.ToJellyfinUsername, serverUrl);
         var response = await _jellyfinApiService.FavoriteTrack(_syncConfiguration.ToName, dbAuthInfo.JellyfinUserId, dbAuthInfo.AccessToken, track.Id);
+        
         return response?.IsFavorite == true;
+    }
+
+    public async Task<bool> RateTrackAsync(string serverUrl, GenericTrack track, float rating)
+    {
+        return false;
     }
 }

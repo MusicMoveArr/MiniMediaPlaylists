@@ -1,4 +1,3 @@
-using System.Reflection.Metadata.Ecma335;
 using FuzzySharp;
 using MiniMediaPlaylists.Helpers;
 using MiniMediaPlaylists.Interfaces;
@@ -111,7 +110,8 @@ public class SyncCommandHandler
 
                                 if (toTrackExists)
                                 {
-                                    //AnsiConsole.WriteLine(Markup.Escape($"Song already in playlist '{fromTrack.ArtistName} - {fromTrack.AlbumName} - {fromTrack.Title}'"));
+                                    task.Value++;
+                                    task.Description(Markup.Escape(Markup.Escape($"Processing Playlist '{fromPlaylist.Name}', {task.Value} of {fromTracks.Count} processed")));
                                     continue;
                                 }
                             }
@@ -138,6 +138,11 @@ public class SyncCommandHandler
 
                             if (foundTrack != null)
                             {
+                                if (await _toProvider.RateTrackAsync(syncConfiguration.ToName, foundTrack, fromTrack.LikeRating))
+                                {
+                                    AnsiConsole.WriteLine(Markup.Escape($"Rated song with rating '{fromTrack.LikeRating}' '{fromTrack.ArtistName} - {fromTrack.AlbumName} - {fromTrack.Title}' {(foundWithDeepSearch ? "found with deep search" : "")}"));
+                                }
+
                                 if (isLikePlaylist)
                                 {
                                     if (await _toProvider.LikeTrackAsync(syncConfiguration.ToName, foundTrack, fromTrack.LikeRating))
@@ -164,10 +169,9 @@ public class SyncCommandHandler
                         {
                             AnsiConsole.WriteLine(Markup.Escape($"Error: {e.Message}"));
                         }
-                        
+
                         task.Value++;
                         task.Description(Markup.Escape(Markup.Escape($"Processing Playlist '{fromPlaylist.Name}', {task.Value} of {fromTracks.Count} processed")));
-                        
                     }
 
                     totalProgressTask.Value++;
@@ -185,7 +189,7 @@ public class SyncCommandHandler
             .Select(track => new
             {
                 Track = track,
-                ArtistMatch = Fuzz.Ratio(track.ArtistName.ToLower(), fromTrack.ArtistName.ToLower()),
+                ArtistMatch = Fuzz.PartialRatio(track.ArtistName.ToLower(), fromTrack.ArtistName.ToLower()),
                 AlbumMatch = Fuzz.Ratio(track.AlbumName.ToLower(), fromTrack.AlbumName.ToLower()),
                 TitleMatch = Fuzz.Ratio(track.Title.ToLower(), fromTrack.Title.ToLower())
             })
