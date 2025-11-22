@@ -12,7 +12,7 @@ Loving the work I do? buy me a coffee https://buymeacoffee.com/musicmovearr
 # Roadmap
 - [ ] More streaming providers support like Deezer, Tidal etc
 - [ ] PreConfiguration Rules files
-- [ ] Playlist versioning (Snapshots)
+- [x] Playlist versioning (Snapshots)
 
 # Supported services
 1. Spotify
