@@ -79,7 +79,8 @@ public class TidalRepository
         DateTime lastModifiedAt,
         string privacy,
         string accessType,
-        string playlistType)
+        string playlistType, 
+        Guid snapshotId)
     {
         string query = @"
             INSERT INTO playlists_tidal_playlist (Id,
@@ -94,11 +95,12 @@ public class TidalRepository
                                                   LastModifiedAt,
                                                   Privacy,
                                                   AccessType,
-                                                  PlaylistType)
+                                                  PlaylistType,
+                                                  SnapshotId)
             VALUES (@playlistId, @ownerId, @href, @name, @description,
                     @bounded, @duration, @numberOfItems, @createdAt,
-                    @lastModifiedAt, @privacy, @accessType, @playlistType)
-            ON CONFLICT (Id, OwnerId)
+                    @lastModifiedAt, @privacy, @accessType, @playlistType, @snapshotId)
+            ON CONFLICT (Id, OwnerId, SnapShotId)
             DO UPDATE set
                 Href = EXCLUDED.Href,
                 name = EXCLUDED.name,
@@ -128,7 +130,8 @@ public class TidalRepository
                 lastModifiedAt,
                 privacy,
                 accessType,
-                playlistType
+                playlistType,
+                snapshotId
             });
     }
     
@@ -147,7 +150,8 @@ public class TidalRepository
         string albumType, 
         string artistName, 
         bool isRemoved, 
-        DateTime addedAt)
+        DateTime addedAt, 
+        Guid snapshotId)
     {
         string query = @"
             INSERT INTO playlists_tidal_playlist_track (Id,
@@ -164,11 +168,12 @@ public class TidalRepository
                                                    AlbumType,
                                                    ArtistName,
                                                    IsRemoved,
-                                                   AddedAt)
+                                                   AddedAt,
+                                                   SnapshotId)
             VALUES (@trackId, @playlistId, @ownerId, @metaItemId, @title,
                     @isrc, @trackExplicit, @albumTitle, @albumReleaseDate, @albumBarcodeId,
-                    @albumExplicit, @albumType, @artistName, @isRemoved, @addedAt)
-            ON CONFLICT (Id, PlayListId, OwnerId)
+                    @albumExplicit, @albumType, @artistName, @isRemoved, @addedAt, @snapshotId)
+            ON CONFLICT (Id, PlayListId, OwnerId, SnapShotId)
             DO UPDATE set
                 MetaItemId = EXCLUDED.MetaItemId,
                 Title = EXCLUDED.Title,
@@ -202,17 +207,18 @@ public class TidalRepository
                 albumType, 
                 artistName, 
                 isRemoved, 
-                addedAt
+                addedAt,
+                snapshotId
             });
     }
     
-    public async Task<List<GenericPlaylist>> GetPlaylistsAsync(string ownerId)
+    public async Task<List<GenericPlaylist>> GetPlaylistsAsync(string ownerId, Guid snapshotId)
     {
         string query = @"select
                              list.id,
                              list.Name
                          from playlists_tidal_owner ppo
-                         join playlists_tidal_playlist list on list.ownerid = ppo.id 
+                         join playlists_tidal_playlist list on list.ownerid = ppo.id and list.snapshotId = @snapshotId
                          where ppo.ownerid = @ownerId";
 
         await using var conn = new NpgsqlConnection(_connectionString);
@@ -220,11 +226,12 @@ public class TidalRepository
         return (await conn.QueryAsync<GenericPlaylist>(query, 
             param: new
             {
-                ownerId
+                ownerId,
+                snapshotId
             })).ToList();
     }
     
-    public async Task<List<GenericTrack>> GetPlaylistTracksAsync(string ownerId, string playlistId)
+    public async Task<List<GenericTrack>> GetPlaylistTracksAsync(string ownerId, string playlistId, Guid snapshotId)
     {
         string query = @"select
                              track.id as Id,
@@ -232,8 +239,8 @@ public class TidalRepository
                              track.AlbumTitle as AlbumName,
                              track.Title as Title
                          from playlists_tidal_owner ppo
-                         join playlists_tidal_playlist list on list.ownerid = ppo.id 
-                         join playlists_tidal_playlist_track track on track.ownerid = ppo.id and track.playlistid = list.id
+                         join playlists_tidal_playlist list on list.ownerid = ppo.id and list.snapshotId = @snapshotId
+                         join playlists_tidal_playlist_track track on track.ownerid = ppo.id and track.playlistid = list.id and track.snapshotId = @snapshotId
                          where ppo.ownerid = @ownerId
                          and list.id = @playlistId";
 
@@ -243,7 +250,8 @@ public class TidalRepository
             param: new
             {
                 ownerId,
-                playlistId
+                playlistId,
+                snapshotId
             })).ToList();
     }
 }

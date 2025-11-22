@@ -9,9 +9,12 @@ namespace MiniMediaPlaylists.Commands;
 public class PullPlexCommandHandler
 {
     private readonly PlexRepository _plexRepository;
+    private readonly SnapshotRepository _snapshotRepository;
+    
     public PullPlexCommandHandler(string connectionString)
     {
         _plexRepository = new PlexRepository(connectionString);
+        _snapshotRepository = new SnapshotRepository(connectionString);
     }
 
     public async Task PullPlexPlaylists(string serverUrl, string token, int trackLimit)
@@ -20,6 +23,7 @@ public class PullPlexCommandHandler
         var playlists = await plexApiService.GetPlaylistsAsync(serverUrl, token);
 
         var serverId = await _plexRepository.UpsertServerAsync(serverUrl);
+        Guid snapshotId = await _snapshotRepository.CreateSnapshotAsync(serverId, "Plex");
         
         await AnsiConsole.Progress()
             .HideCompleted(true)
@@ -54,7 +58,7 @@ public class PullPlexCommandHandler
                          //    continue;
                          //}
                          
-                         await _plexRepository.UpsertPlaylistAsync(playlist, serverId);
+                         await _plexRepository.UpsertPlaylistAsync(playlist, serverId, snapshotId);
                      
                          var tracks = await plexApiService.GetPlaylistTracksAsync(serverUrl, token, playlist.RatingKey);
          
@@ -70,7 +74,7 @@ public class PullPlexCommandHandler
                          {
                              task.Value++;
                              task.Description(Markup.Escape($"Processing Playlists '{playlist.Title}', {task.Value} of {tracks.MediaContainer.Metadata.Count} processed"));
-                             await _plexRepository.UpsertPlaylistTrackAsync(track, playlist.RatingKey, serverId);
+                             await _plexRepository.UpsertPlaylistTrackAsync(track, playlist.RatingKey, serverId, snapshotId);
                          }
                      }
                      catch (Exception e)
@@ -83,5 +87,6 @@ public class PullPlexCommandHandler
             });
 
         await _plexRepository.SetLastSyncTimeAsync(serverId);
+        await _snapshotRepository.SetSnapshotCompleteAsync(snapshotId);
     }
 }

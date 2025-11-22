@@ -12,9 +12,11 @@ namespace MiniMediaPlaylists.Commands;
 public class PullSubSonicCommandHandler
 {
     private readonly SubSonicRepository _subSonicRepository;
+    private readonly SnapshotRepository _snapshotRepository;
     public PullSubSonicCommandHandler(string connectionString)
     {
         _subSonicRepository = new SubSonicRepository(connectionString);
+        _snapshotRepository = new SnapshotRepository(connectionString);
     }
 
     public async Task PullSubSonicPlaylists(
@@ -32,6 +34,7 @@ public class PullSubSonicCommandHandler
         var playlists = await client.Playlists.GetPlaylistsAsync();
 
         Guid serverId = await _subSonicRepository.UpsertServerAsync(serverUrl);
+        Guid snapshotId = await _snapshotRepository.CreateSnapshotAsync(serverId, "Subsonic");
 
         await AnsiConsole.Progress()
             .HideCompleted(true)
@@ -86,7 +89,8 @@ public class PullSubSonicCommandHandler
                             playlist.Name,
                             playlist.Owner,
                             playlist.Public,
-                            playlist.SongCount);
+                            playlist.SongCount,
+                            snapshotId);
 
                         List<Song> tracks = new List<Song>();
                         if (!string.IsNullOrWhiteSpace(genLikedPlaylistName) &&
@@ -121,7 +125,8 @@ public class PullSubSonicCommandHandler
                                 track.Size,
                                 track.Year ?? 0,
                                 DateTime.Now,
-                                track.UserRating ?? 0);
+                                track.UserRating ?? 0,
+                                snapshotId);
                             task.Increment(1);
                             task.Description(Markup.Escape($"Processing Playlist '{playlist.Name}', {task.Value} of {tracks.Count} processed"));
                         }
@@ -136,5 +141,6 @@ public class PullSubSonicCommandHandler
                 }
             });
         await _subSonicRepository.SetLastSyncTimeAsync(serverId);
+        await _snapshotRepository.SetSnapshotCompleteAsync(snapshotId);
     }
 }

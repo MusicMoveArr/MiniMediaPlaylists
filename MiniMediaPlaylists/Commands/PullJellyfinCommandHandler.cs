@@ -10,9 +10,11 @@ namespace MiniMediaPlaylists.Commands;
 public class PullJellyfinCommandHandler
 {
     private readonly JellyfinRepository _jellyfinRepository;
+    private readonly SnapshotRepository _snapshotRepository;
     public PullJellyfinCommandHandler(string connectionString)
     {
         _jellyfinRepository = new JellyfinRepository(connectionString);
+        _snapshotRepository = new SnapshotRepository(connectionString);
     }
 
     public async Task PullJellyfinPlaylists(
@@ -38,6 +40,7 @@ public class PullJellyfinCommandHandler
         var playlists = await jellyfinApiService
             .GetItems<JellyfinPlaylistItem>(serverUrl, jellyfinUserId, accessToken, "Playlist", true, false);
 
+        Guid snapshotId = await _snapshotRepository.CreateSnapshotAsync(dbAuthInfo.Id, "Jellyfin");
 
         await AnsiConsole.Progress()
             .HideCompleted(true)
@@ -77,7 +80,8 @@ public class PullJellyfinCommandHandler
                         true, 
                         string.Empty, 
                         string.Empty,
-                        string.Empty);
+                        string.Empty,
+                        snapshotId);
                     
                     var task = ctx.AddTask(Markup.Escape($"Processing Favorites Playlist '{favoriteSongsPlaylistName}', 0 of {favoriteTracks.Items.Count} processed"));
                     task.MaxValue = favoriteTracks.Items.Count;
@@ -101,7 +105,10 @@ public class PullJellyfinCommandHandler
                             track.UserData.Key,
                             track.UserData.IsFavorite,
                             track.MediaType, 
-                            track.LocationType, false, DateTime.Now);
+                            track.LocationType, 
+                            false, 
+                            DateTime.Now,
+                            snapshotId);
                         task.Increment(1);
                         task.Description(Markup.Escape($"Processing Favorites Playlist '{favoriteSongsPlaylistName}', {task.Value} of {favoriteTracks.Items.Count} processed"));
                     }
@@ -119,7 +126,8 @@ public class PullJellyfinCommandHandler
                             playlist.IsFolder,
                             playlist.UserData.Key,
                             playlist.MediaType,
-                            playlist.LocationType);
+                            playlist.LocationType,
+                            snapshotId);
 
                         var tracks = await jellyfinApiService.GetPlaylistTracks(serverUrl, dbAuthInfo.JellyfinUserId,
                             playlist.Id,
@@ -148,7 +156,10 @@ public class PullJellyfinCommandHandler
                                 track.UserData.Key,
                                 track.UserData.IsFavorite,
                                 track.MediaType,
-                                track.LocationType, false, DateTime.Now);
+                                track.LocationType, 
+                                false, 
+                                DateTime.Now,
+                                snapshotId);
                             task.Increment(1);
                             task.Description(Markup.Escape($"Processing Playlist '{playlist.Name}', {task.Value} of {tracks.Items.Count} processed"));
                         }
@@ -164,5 +175,7 @@ public class PullJellyfinCommandHandler
                 }
             });
 
+        await _jellyfinRepository.SetLastSyncTimeAsync(dbAuthInfo.Id);
+        await _snapshotRepository.SetSnapshotCompleteAsync(snapshotId);
     }
 }

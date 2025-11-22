@@ -17,14 +17,14 @@ public class JellyfinService : IProviderService
         _syncConfiguration = syncConfiguration;
     }
     
-    public async Task<List<GenericPlaylist>> GetPlaylistsAsync(string serverUrl)
+    public async Task<List<GenericPlaylist>> GetPlaylistsAsync(string serverUrl, Guid snapshotId)
     {
-        return await _jellyfinRepository.GetPlaylistsAsync(serverUrl);
+        return await _jellyfinRepository.GetPlaylistsAsync(serverUrl, snapshotId);
     }
 
-    public async Task<List<GenericTrack>> GetPlaylistTracksAsync(string serverUrl, string playlistId)
+    public async Task<List<GenericTrack>> GetPlaylistTracksAsync(string serverUrl, string playlistId, Guid snapshotId)
     {
-        return await _jellyfinRepository.GetPlaylistTracksAsync(serverUrl, playlistId);
+        return await _jellyfinRepository.GetPlaylistTracksAsync(serverUrl, playlistId, snapshotId);
     }
 
     public async Task<GenericPlaylist> CreatePlaylistAsync(string serverUrl, string name)

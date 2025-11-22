@@ -20,9 +20,9 @@ public class PlexService : IProviderService
         _serverMachineIdentifiers = new Dictionary<string, string>();
     }
     
-    public async Task<List<GenericPlaylist>> GetPlaylistsAsync(string serverUrl)
+    public async Task<List<GenericPlaylist>> GetPlaylistsAsync(string serverUrl, Guid snapshotId)
     {
-        return await _plexRepository.GetPlaylistsAsync(serverUrl);
+        return await _plexRepository.GetPlaylistsAsync(serverUrl, snapshotId);
     }
 
     public async Task<GenericPlaylist> CreatePlaylistAsync(string serverUrl, string name)
@@ -37,9 +37,9 @@ public class PlexService : IProviderService
         };
     }
 
-    public async Task<List<GenericTrack>> GetPlaylistTracksAsync(string serverUrl, string playlistId)
+    public async Task<List<GenericTrack>> GetPlaylistTracksAsync(string serverUrl, string playlistId, Guid snapshotId)
     {
-        return await _plexRepository.GetPlaylistTracksAsync(serverUrl, playlistId);
+        return await _plexRepository.GetPlaylistTracksAsync(serverUrl, playlistId, snapshotId);
     }
 
     public async Task<List<GenericTrack>> SearchTrackAsync(string serverUrl, string artist, string album, string title)

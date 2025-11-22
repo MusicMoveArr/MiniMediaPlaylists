@@ -47,7 +47,8 @@ public class PlexRepository
     
     public async Task<Guid> UpsertPlaylistAsync(
         PlaylistModel playlistModel,
-        Guid serverId)
+        Guid serverId, 
+        Guid snapshotId)
     {
         if (string.IsNullOrWhiteSpace(playlistModel.TitleSort))
         {
@@ -79,7 +80,8 @@ public class PlexRepository
                                                  Duration,
                                                  LeafCount,
                                                  AddedAt,
-                                                 UpdatedAt)
+                                                 UpdatedAt,
+                                                 SnapshotId)
             VALUES (@RatingKey,
                     @ServerId,
                     @Key,
@@ -96,8 +98,9 @@ public class PlexRepository
                     @Duration,
                     @LeafCount,
                     @AddedAt,
-                    @UpdatedAt)
-            ON CONFLICT (RatingKey, ServerId)
+                    @UpdatedAt,
+                    @snapshotId)
+            ON CONFLICT (RatingKey, ServerId, SnapShotId)
             DO UPDATE set
                 Key = EXCLUDED.Key,
                 Guid = EXCLUDED.Guid,
@@ -136,7 +139,8 @@ public class PlexRepository
                 playlistModel.Duration,
                 playlistModel.LeafCount,
                 AddedAt = DateTimeOffset.FromUnixTimeSeconds(playlistModel.AddedAt).DateTime,
-                UpdatedAt = DateTimeOffset.FromUnixTimeSeconds(playlistModel.UpdatedAt).DateTime
+                UpdatedAt = DateTimeOffset.FromUnixTimeSeconds(playlistModel.UpdatedAt).DateTime,
+                snapshotId
             });
     }
     
@@ -144,7 +148,8 @@ public class PlexRepository
     public async Task UpsertPlaylistTrackAsync(
         PlexTrackModel trackModel,
         string playListId,
-        Guid serverId)
+        Guid serverId, 
+        Guid snapshotId)
     {
         if (string.IsNullOrWhiteSpace(trackModel.ParentStudio))
         {
@@ -184,7 +189,8 @@ public class PlexRepository
                                                    IsRemoved,
                                                    LastViewedAt,
                                                    LastRatedAt,
-                                                   AddedAt)
+                                                   AddedAt,
+                                                   SnapshotId)
             VALUES (@RatingKey,
                     @PlayListId,
                     @ServerId,
@@ -209,8 +215,9 @@ public class PlexRepository
                     @IsRemoved,
                     @LastViewedAt,
                     @LastRatedAt,
-                    @AddedAt)
-            ON CONFLICT (RatingKey, PlayListId, ServerId)
+                    @AddedAt,
+                    @snapshotId)
+            ON CONFLICT (RatingKey, PlayListId, ServerId, SnapShotId)
             DO UPDATE set
                 Key = EXCLUDED.Key,
                 Type = EXCLUDED.Type,
@@ -265,16 +272,17 @@ public class PlexRepository
                 LastViewedAt = DateTimeOffset.FromUnixTimeSeconds(trackModel.LastViewedAt).DateTime,
                 LastRatedAt = DateTimeOffset.FromUnixTimeSeconds(trackModel.LastRatedAt).DateTime,
                 AddedAt = DateTimeOffset.FromUnixTimeSeconds(trackModel.AddedAt).DateTime,
+                snapshotId
             });
     }
     
-    public async Task<List<GenericPlaylist>> GetPlaylistsAsync(string serverUrl)
+    public async Task<List<GenericPlaylist>> GetPlaylistsAsync(string serverUrl, Guid snapshotId)
     {
         string query = @"select
 	                         list.ratingkey as Id,
 	                         list.Title as Name
                          from playlists_plex_server pps 
-                         join playlists_plex_playlist list on list.serverid = pps.id 
+                         join playlists_plex_playlist list on list.serverid = pps.id and list.snapshotId = @snapshotId
                          where pps.serverurl = @serverUrl";
 
         await using var conn = new NpgsqlConnection(_connectionString);
@@ -282,11 +290,12 @@ public class PlexRepository
         return (await conn.QueryAsync<GenericPlaylist>(query, 
             param: new
             {
-                serverUrl
+                serverUrl,
+                snapshotId
             })).ToList();
     }
     
-    public async Task<List<GenericTrack>> GetPlaylistTracksAsync(string serverUrl, string playlistId)
+    public async Task<List<GenericTrack>> GetPlaylistTracksAsync(string serverUrl, string playlistId, Guid snapshotId)
     {
         string query = @"select
                              track.ratingkey as Id,
@@ -295,8 +304,8 @@ public class PlexRepository
                              track.title as Title,
                              track.UserRating as LikeRating
                          from playlists_plex_server pps 
-                         join playlists_plex_playlist list on list.serverid = pps.id 
-                         join playlists_plex_playlist_track track on track.serverid = pps.id and track.playlistid = list.ratingkey
+                         join playlists_plex_playlist list on list.serverid = pps.id and list.snapshotId = @snapshotId
+                         join playlists_plex_playlist_track track on track.serverid = pps.id and track.playlistid = list.ratingkey and track.snapshotId = @snapshotId
                          where pps.serverurl = @serverUrl
                          and list.ratingkey = @playlistId";
 
@@ -306,17 +315,18 @@ public class PlexRepository
             param: new
             {
                 serverUrl,
-                playlistId
+                playlistId,
+                snapshotId
             })).ToList();
     }
     
-    public async Task<bool> IsPlaylistUpdatedAsync(string serverUrl, string playlistId, long addedAt, long updatedAt)
+    public async Task<bool> IsPlaylistUpdatedAsync(string serverUrl, string playlistId, long addedAt, long updatedAt, Guid snapshotId)
     {
         string query = @"select
 	                         list.AddedAt,
 	                         list.UpdatedAt
                          from playlists_plex_server pps 
-                         join playlists_plex_playlist list on list.serverid = pps.id 
+                         join playlists_plex_playlist list on list.serverid = pps.id and list.snapshotId = @snapshotId
                          where pps.serverurl = @serverUrl
                          and list.ratingkey = @playlistId";
 
@@ -326,7 +336,8 @@ public class PlexRepository
             param: new
             {
                 serverUrl,
-                playlistId
+                playlistId,
+                snapshotId
             });
 
         if (updatedModel == null)
@@ -342,7 +353,7 @@ public class PlexRepository
         string query = @"select distinct
                              track.librarysectionid
                          from playlists_plex_server pps 
-                         join playlists_plex_playlist list on list.serverid = pps.id 
+                         join playlists_plex_playlist list on list.serverid = pps.id
                          join playlists_plex_playlist_track track on track.serverid = pps.id and track.playlistid = list.ratingkey
                          where pps.serverurl = @serverUrl";
 

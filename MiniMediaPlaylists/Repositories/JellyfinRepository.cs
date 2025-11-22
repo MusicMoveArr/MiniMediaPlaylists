@@ -74,7 +74,8 @@ public class JellyfinRepository
         bool isFolder,
         string userDataKey,
         string mediaType,
-        string locationType)
+        string locationType,
+        Guid snapshotId)
     {
         string query = @"
             INSERT INTO playlists_jellyfin_playlist (Id,
@@ -85,11 +86,12 @@ public class JellyfinRepository
                                                   IsFolder,
                                                   UserDataKey,
                                                   MediaType,
-                                                  LocationType)
+                                                  LocationType,
+                                                  SnapshotId)
             VALUES (@playlistId, @ownerId, @name, @serverId,
                     @channelId, @isFolder, @userDataKey, @mediaType,
-                    @locationType)
-            ON CONFLICT (Id, OwnerId)
+                    @locationType, @snapshotId)
+            ON CONFLICT (Id, OwnerId, SnapShotId)
             DO UPDATE set
                 name = EXCLUDED.name,
                 ServerId = EXCLUDED.ServerId,
@@ -112,7 +114,8 @@ public class JellyfinRepository
                 isFolder,
                 userDataKey,
                 mediaType,
-                locationType
+                locationType,
+                snapshotId
             });
     }
     
@@ -136,7 +139,8 @@ public class JellyfinRepository
         string mediaType,
         string locationType,
         bool isRemoved,
-        DateTime addedAt)
+        DateTime addedAt,
+        Guid snapshotId)
     {
         string query = @"
             INSERT INTO playlists_jellyfin_playlist_track (Id,
@@ -158,12 +162,13 @@ public class JellyfinRepository
                                                    MediaType,
                                                    LocationType,
                                                    IsRemoved,
-                                                   AddedAt)
+                                                   AddedAt,
+                                                   SnapshotId)
             VALUES (@trackId, @playlistId, @ownerId, @title, @artist, @albumArtist,
                 @album, @playListItemId, @container, @premiereDate, @channelId,
                 @productionYear, @indexNumber,  @isFolder, @userDataKey, @userDataIsFavorite,
-                @mediaType, @locationType, @isRemoved, @addedAt)
-            ON CONFLICT (Id, PlayListId, OwnerId)
+                @mediaType, @locationType, @isRemoved, @addedAt, @snapshotId)
+            ON CONFLICT (Id, PlayListId, OwnerId, SnapShotId)
             DO UPDATE set
                 Title = EXCLUDED.Title,
                 artist = EXCLUDED.artist,
@@ -207,29 +212,32 @@ public class JellyfinRepository
                 mediaType,
                 locationType,
                 isRemoved,
-                addedAt
+                addedAt,
+                snapshotId
             });
     }
     
-    public async Task<List<GenericPlaylist>> GetPlaylistsAsync(string username)
+    public async Task<List<GenericPlaylist>> GetPlaylistsAsync(string username, Guid snapshotId)
     {
         string query = @"select
                              list.id,
                              list.Name
                          from playlists_jellyfin_owner ppo
                          join playlists_jellyfin_playlist list on list.ownerid = ppo.id 
-                         where ppo.username = @username";
+                         where ppo.username = @username
+                         and list.snapshotId = @snapshotId";
 
         await using var conn = new NpgsqlConnection(_connectionString);
 
         return (await conn.QueryAsync<GenericPlaylist>(query, 
             param: new
             {
-                username
+                username,
+                snapshotId
             })).ToList();
     }
     
-    public async Task<List<GenericTrack>> GetPlaylistTracksAsync(string username, string playlistId)
+    public async Task<List<GenericTrack>> GetPlaylistTracksAsync(string username, string playlistId, Guid snapshotId)
     {
         string query = @"select
                              track.id as Id,
@@ -237,8 +245,8 @@ public class JellyfinRepository
                              track.Album as AlbumName,
                              track.Title as Title
                          from playlists_jellyfin_owner ppo
-                         join playlists_jellyfin_playlist list on list.ownerid = ppo.id 
-                         join playlists_jellyfin_playlist_track track on track.ownerid = ppo.id and track.playlistid = list.id
+                         join playlists_jellyfin_playlist list on list.ownerid = ppo.id and list.snapshotId = @snapshotId
+                         join playlists_jellyfin_playlist_track track on track.ownerid = ppo.id and track.playlistid = list.id and track.snapshotId = @snapshotId
                          where ppo.username = @username
                          and list.id = @playlistId";
 
@@ -248,7 +256,8 @@ public class JellyfinRepository
             param: new
             {
                 username,
-                playlistId
+                playlistId,
+                snapshotId
             })).ToList();
     }
 }

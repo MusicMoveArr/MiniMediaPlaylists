@@ -54,7 +54,8 @@ public class SubSonicRepository
         string name,
         string owner, 
         bool isPublic,
-        int songCount)
+        int songCount, 
+        Guid snapshotId)
     {
         if (string.IsNullOrWhiteSpace(comment))
         {
@@ -79,10 +80,11 @@ public class SubSonicRepository
                                                    Name,
                                                    Owner,
                                                    Public,
-                                                   SongCount)
+                                                   SongCount,
+                                                   SnapshotId)
             VALUES (@playlistId, @serverId, @changedAt, @createdAt, @comment,
-                    @duration, @name, @owner, @isPublic, @songCount)
-            ON CONFLICT (Id, ServerId)
+                    @duration, @name, @owner, @isPublic, @songCount, @snapshotId)
+            ON CONFLICT (Id, ServerId, SnapShotId)
             DO UPDATE set
                 ChangedAt = EXCLUDED.ChangedAt,
                 CreatedAt = EXCLUDED.CreatedAt,
@@ -107,7 +109,8 @@ public class SubSonicRepository
                 name,
                 owner,
                 isPublic,
-                songCount
+                songCount,
+                snapshotId
             });
     }
     
@@ -126,7 +129,8 @@ public class SubSonicRepository
         long size,
         int year,
         DateTime addedAt,
-        int userRating)
+        int userRating, 
+        Guid snapshotId)
     {
         if (string.IsNullOrWhiteSpace(album))
         {
@@ -171,10 +175,11 @@ public class SubSonicRepository
                                                    Year,
                                                    IsRemoved,
                                                    AddedAt,
-                                                   UserRating)
+                                                   UserRating,
+                                                   SnapshotId)
             VALUES (@trackId, @playlistId, @serverId, @album, @albumId, @artist, @artistId,
-                    @duration, @title, @path, @size, @year, @isRemoved, @addedAt, @userRating)
-            ON CONFLICT (Id, PlayListId, ServerId)
+                    @duration, @title, @path, @size, @year, @isRemoved, @addedAt, @userRating, @snapshotId)
+            ON CONFLICT (Id, PlayListId, ServerId, SnapShotId)
             DO UPDATE set
                 album = EXCLUDED.album,
                 albumId = EXCLUDED.albumId,
@@ -207,17 +212,18 @@ public class SubSonicRepository
                 year,
                 isRemoved = false,
                 addedAt,
-                userRating
+                userRating,
+                snapshotId
             });
     }
     
-    public async Task<List<GenericPlaylist>> GetPlaylistsAsync(string serverUrl)
+    public async Task<List<GenericPlaylist>> GetPlaylistsAsync(string serverUrl, Guid snapshotId)
     {
         string query = @"select
 	                         list.Id,
 	                         list.Name
                          from playlists_subsonic_server pps 
-                         join playlists_subsonic_playlist list on list.serverid = pps.id 
+                         join playlists_subsonic_playlist list on list.serverid = pps.id and list.snapshotId = @snapshotId
                          where pps.serverurl = @serverUrl";
 
         await using var conn = new NpgsqlConnection(_connectionString);
@@ -225,11 +231,12 @@ public class SubSonicRepository
         return (await conn.QueryAsync<GenericPlaylist>(query, 
             param: new
             {
-                serverUrl
+                serverUrl,
+                snapshotId
             })).ToList();
     }
     
-    public async Task<List<GenericTrack>> GetPlaylistTracksAsync(string serverUrl, string playlistId)
+    public async Task<List<GenericTrack>> GetPlaylistTracksAsync(string serverUrl, string playlistId, Guid snapshotId)
     {
         string query = @"select
                              track.id as Id,
@@ -238,8 +245,8 @@ public class SubSonicRepository
                              track.title as Title,
                              track.UserRating as LikeRating
                          from playlists_subsonic_server pps 
-                         join playlists_subsonic_playlist list on list.serverid = pps.id 
-                         join playlists_subsonic_playlist_track track on track.serverid = pps.id and track.playlistid = list.id
+                         join playlists_subsonic_playlist list on list.serverid = pps.id and list.snapshotId = @snapshotId
+                         join playlists_subsonic_playlist_track track on track.serverid = pps.id and track.playlistid = list.id and track.snapshotId = @snapshotId
                          where pps.serverurl = @serverUrl
                          and list.id = @playlistId";
 
@@ -249,7 +256,8 @@ public class SubSonicRepository
             param: new
             {
                 serverUrl,
-                playlistId
+                playlistId,
+                snapshotId
             })).ToList();
     }
 }

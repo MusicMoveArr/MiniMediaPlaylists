@@ -19,14 +19,14 @@ public class TidalService : IProviderService
         _syncConfiguration = syncConfiguration;
     }
     
-    public async Task<List<GenericPlaylist>> GetPlaylistsAsync(string serverUrl)
+    public async Task<List<GenericPlaylist>> GetPlaylistsAsync(string serverUrl, Guid snapshotId)
     {
-        return await _tidalRepository.GetPlaylistsAsync(serverUrl);
+        return await _tidalRepository.GetPlaylistsAsync(serverUrl, snapshotId);
     }
 
-    public async Task<List<GenericTrack>> GetPlaylistTracksAsync(string serverUrl, string playlistId)
+    public async Task<List<GenericTrack>> GetPlaylistTracksAsync(string serverUrl, string playlistId, Guid snapshotId)
     {
-        return await _tidalRepository.GetPlaylistTracksAsync(serverUrl, playlistId);
+        return await _tidalRepository.GetPlaylistTracksAsync(serverUrl, playlistId, snapshotId);
     }
 
     public async Task<GenericPlaylist> CreatePlaylistAsync(string serverUrl, string name)

@@ -71,29 +71,28 @@ public class SpotifyRepository
         Guid ownerId, 
         string href,
         string name,
-        string snapshotId,
         int trackCount,
         string uri,
         DateTime addedAt, 
-        DateTime updatedAt)
+        DateTime updatedAt, 
+        Guid snapshotId)
     {
         string query = @"
             INSERT INTO playlists_spotify_playlist (Id,
                                                    OwnerId,
                                                    Href,
                                                    Name,
-                                                   SnapshotId,
                                                    TrackCount,
                                                    Uri,
                                                    AddedAt,
-                                                   UpdatedAt)
-            VALUES (@playlistId, @ownerId, @href, @name, @snapshotId,
-                    @trackCount, @uri, @addedAt, @updatedAt)
-            ON CONFLICT (Id, OwnerId)
+                                                   UpdatedAt,
+                                                   SnapshotId)
+            VALUES (@playlistId, @ownerId, @href, @name,
+                    @trackCount, @uri, @addedAt, @updatedAt, @snapshotId)
+            ON CONFLICT (Id, OwnerId, SnapShotId)
             DO UPDATE set
                 href = EXCLUDED.href,
                 name = EXCLUDED.name,
-                snapshotId = EXCLUDED.snapshotId,
                 trackCount = EXCLUDED.trackCount,
                 uri = EXCLUDED.uri,
                 addedAt = EXCLUDED.addedAt,
@@ -108,11 +107,11 @@ public class SpotifyRepository
                 ownerId,
                 href,
                 name,
-                snapshotId,
                 trackCount,
                 uri,
                 addedAt,
-                updatedAt
+                updatedAt,
+                snapshotId
             });
     }
     
@@ -161,7 +160,8 @@ public class SpotifyRepository
         string addedById, 
         string addedByType, 
         bool isRemoved, 
-        DateTime addedAt)
+        DateTime addedAt, 
+        Guid snapshotId)
     {
         string query = @"
             INSERT INTO playlists_spotify_playlist_track (Id,
@@ -177,11 +177,12 @@ public class SpotifyRepository
                                                    AddedById,
                                                    AddedByType,
                                                    IsRemoved,
-                                                   AddedAt)
+                                                   AddedAt,
+                                                   SnapshotId)
             VALUES (@trackId, @playlistId, @ownerId, @albumType, @albumId,
                     @albumName, @albumReleaseDate, @albumTotalTracks, @artistName, @name,
-                    @addedById, @addedByType, @isRemoved, @addedAt)
-            ON CONFLICT (Id, PlayListId, OwnerId)
+                    @addedById, @addedByType, @isRemoved, @addedAt, @snapshotId)
+            ON CONFLICT (Id, PlayListId, OwnerId, SnapShotId)
             DO UPDATE set
                 AlbumType = EXCLUDED.AlbumType,
                 AlbumId = EXCLUDED.AlbumId,
@@ -213,17 +214,18 @@ public class SpotifyRepository
                 addedById, 
                 addedByType, 
                 isRemoved, 
-                addedAt
+                addedAt,
+                snapshotId
             });
     }
     
-    public async Task<List<GenericPlaylist>> GetPlaylistsAsync(string ownerId)
+    public async Task<List<GenericPlaylist>> GetPlaylistsAsync(string ownerId, Guid snapshotId)
     {
         string query = @"select
                              list.id,
                              list.Name
                          from playlists_spotify_owner ppo
-                         join playlists_spotify_playlist list on list.ownerid = ppo.id 
+                         join playlists_spotify_playlist list on list.ownerid = ppo.id and list.snapshotId = @snapshotId
                          where ppo.ownerid = @ownerId";
 
         await using var conn = new NpgsqlConnection(_connectionString);
@@ -231,11 +233,12 @@ public class SpotifyRepository
         return (await conn.QueryAsync<GenericPlaylist>(query, 
             param: new
             {
-                ownerId
+                ownerId,
+                snapshotId
             })).ToList();
     }
     
-    public async Task<List<GenericTrack>> GetPlaylistTracksAsync(string ownerId, string playlistId)
+    public async Task<List<GenericTrack>> GetPlaylistTracksAsync(string ownerId, string playlistId, Guid snapshotId)
     {
         string query = @"select
                              track.id as Id,
@@ -243,8 +246,8 @@ public class SpotifyRepository
                              track.AlbumName as AlbumName,
                              track.Name as Title
                          from playlists_spotify_owner ppo
-                         join playlists_spotify_playlist list on list.ownerid = ppo.id 
-                         join playlists_spotify_playlist_track track on track.ownerid = ppo.id and track.playlistid = list.id
+                         join playlists_spotify_playlist list on list.ownerid = ppo.id and list.snapshotId = @snapshotId
+                         join playlists_spotify_playlist_track track on track.ownerid = ppo.id and track.playlistid = list.id and track.snapshotId = @snapshotId
                          where ppo.ownerid = @ownerId
                          and list.id = @playlistId";
 
@@ -254,7 +257,8 @@ public class SpotifyRepository
             param: new
             {
                 ownerId,
-                playlistId
+                playlistId,
+                snapshotId
             })).ToList();
     }
 }

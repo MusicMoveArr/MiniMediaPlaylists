@@ -10,9 +10,11 @@ namespace MiniMediaPlaylists.Commands;
 public class PullSpotifyCommandHandler
 {
     private readonly SpotifyRepository _spotifyRepository;
+    private readonly SnapshotRepository _snapshotRepository;
     public PullSpotifyCommandHandler(string connectionString)
     {
         _spotifyRepository = new SpotifyRepository(connectionString);
+        _snapshotRepository = new SnapshotRepository(connectionString);
     }
 
     public async Task PullSpotifyPlaylists(
@@ -51,6 +53,7 @@ public class PullSpotifyCommandHandler
         var currentUser = await spotifyClient.UserProfile.Current();
         var playlists = await spotifyClient.Playlists.CurrentUsers();
         var ownerId = await _spotifyRepository.UpsertOwnerAsync(currentUser.Id, spotifyClientId, spotifySecretId, refreshToken);
+        Guid snapshotId = await _snapshotRepository.CreateSnapshotAsync(ownerId, "Spotify");
 
         await AnsiConsole.Progress()
             .HideCompleted(true)
@@ -107,11 +110,11 @@ public class PullSpotifyCommandHandler
                             ownerId,
                             playlist.Href,
                             playlist.Name,
-                            playlist.SnapshotId,
                             playlist.Tracks.Total ?? 0,
                             playlist.Uri,
                             DateTime.Now,
-                            DateTime.Now);
+                            DateTime.Now,
+                            snapshotId);
                 
                         var tracks = await spotifyClient.Playlists.GetItems(playlist.Id);
 
@@ -150,7 +153,8 @@ public class PullSpotifyCommandHandler
                                     item.AddedBy.Id,
                                     item.AddedBy.Type,
                                     false,
-                                    item.AddedAt ?? DateTime.Now);
+                                    item.AddedAt ?? DateTime.Now,
+                                    snapshotId);
                             }
                             task.Increment(1);
                             task.Description(Markup.Escape($"Processing Playlist '{playlist.Name}', {task.Value} of {allTracks.Count} processed"));
@@ -167,6 +171,7 @@ public class PullSpotifyCommandHandler
             });
 
         await _spotifyRepository.SetLastSyncTimeAsync(ownerId);
+        await _snapshotRepository.SetSnapshotCompleteAsync(snapshotId);
     }
 
     private async Task<AuthorizationCodeTokenResponse> HandleSpotifyAuthAsync(

@@ -2,6 +2,7 @@ using FuzzySharp;
 using MiniMediaPlaylists.Helpers;
 using MiniMediaPlaylists.Interfaces;
 using MiniMediaPlaylists.Models;
+using MiniMediaPlaylists.Repositories;
 using MiniMediaPlaylists.Services;
 using Spectre.Console;
 
@@ -12,10 +13,12 @@ public class SyncCommandHandler
     private readonly string _connectionString;
     private IProviderService _fromProvider;
     private IProviderService _toProvider;
+    private readonly SnapshotRepository _snapshotRepository;
     
     public SyncCommandHandler(string connectionString)
     {
         _connectionString = connectionString;
+        _snapshotRepository = new SnapshotRepository(connectionString);
     }
 
     public async Task SyncPlaylists(SyncConfiguration syncConfiguration)
@@ -23,8 +26,11 @@ public class SyncCommandHandler
         _fromProvider = GetProviderServiceFrom(syncConfiguration, _connectionString);
         _toProvider = GetProviderServiceTo(syncConfiguration, _connectionString);
 
-        var fromPlaylists = await _fromProvider.GetPlaylistsAsync(syncConfiguration.FromName);
-        var toPlaylists = await _toProvider.GetPlaylistsAsync(syncConfiguration.ToName);
+        Guid fromSnapshotId = await GetLastCompleteTransactionAsync(syncConfiguration.FromService, syncConfiguration.FromName) ?? Guid.Empty;
+        Guid toSnapshotId = await GetLastCompleteTransactionAsync(syncConfiguration.ToService, syncConfiguration.ToName) ?? Guid.Empty;
+
+        var fromPlaylists = await _fromProvider.GetPlaylistsAsync(syncConfiguration.FromName, fromSnapshotId);
+        var toPlaylists = await _toProvider.GetPlaylistsAsync(syncConfiguration.ToName, toSnapshotId);
         
         if (!string.IsNullOrWhiteSpace(syncConfiguration.FromPlaylistName))
         {
@@ -86,10 +92,10 @@ public class SyncCommandHandler
                             syncConfiguration.ToPlaylistPrefix + fromPlaylist.Name);
                     }
 
-                    var fromTracks = await _fromProvider.GetPlaylistTracksAsync(syncConfiguration.FromName, fromPlaylist.Id);
+                    var fromTracks = await _fromProvider.GetPlaylistTracksAsync(syncConfiguration.FromName, fromPlaylist.Id, fromSnapshotId);
                     var toTracks =
                         string.IsNullOrWhiteSpace(toPlayList?.Id) || isLikePlaylist ? [] :
-                        await _toProvider.GetPlaylistTracksAsync(syncConfiguration.ToName, toPlayList.Id);
+                        await _toProvider.GetPlaylistTracksAsync(syncConfiguration.ToName, toPlayList.Id, toSnapshotId);
 
                     var task = ctx.AddTask(Markup.Escape($"Processing Playlist '{fromPlaylist.Name}', 0 of {fromTracks.Count} processed"));
                     task.MaxValue = fromTracks.Count;
@@ -236,6 +242,25 @@ public class SyncCommandHandler
             case "jellyfin": return new JellyfinService(connectionString, syncConfiguration);
             default:
                 throw new System.NotImplementedException(syncConfiguration.FromService);
+        }
+    }
+
+    private async Task<Guid?> GetLastCompleteTransactionAsync(string serviceName, string name)
+    {
+        switch (serviceName)
+        {
+            case "subsonic": 
+                return await _snapshotRepository.GetLastCompleteTransactionSubsonicAsync(name);
+            case "plex": 
+                return await _snapshotRepository.GetLastCompleteTransactionPlexAsync(name);
+            case "spotify": 
+                return await _snapshotRepository.GetLastCompleteTransactionSpotifyAsync(name);
+            case "tidal": 
+                return await _snapshotRepository.GetLastCompleteTransactionTidalAsync(name);
+            case "jellyfin":
+                return await _snapshotRepository.GetLastCompleteTransactionJellyfinAsync(name);
+            default:
+                throw new System.NotImplementedException(serviceName);
         }
     }
 }      

@@ -17,9 +17,9 @@ public class SpotifyService : IProviderService
         _syncConfiguration = syncConfiguration;
     }
     
-    public async Task<List<GenericPlaylist>> GetPlaylistsAsync(string ownerId)
+    public async Task<List<GenericPlaylist>> GetPlaylistsAsync(string ownerId, Guid snapshotId)
     {
-        return await _spotifyRepository.GetPlaylistsAsync(ownerId);
+        return await _spotifyRepository.GetPlaylistsAsync(ownerId, snapshotId);
     }
 
     public async Task<GenericPlaylist> CreatePlaylistAsync(string serverUrl, string name)
@@ -38,9 +38,9 @@ public class SpotifyService : IProviderService
         };
     }
 
-    public async Task<List<GenericTrack>> GetPlaylistTracksAsync(string serverUrl, string playlistId)
+    public async Task<List<GenericTrack>> GetPlaylistTracksAsync(string serverUrl, string playlistId, Guid snapshotId)
     {
-        return await _spotifyRepository.GetPlaylistTracksAsync(serverUrl, playlistId);
+        return await _spotifyRepository.GetPlaylistTracksAsync(serverUrl, playlistId, snapshotId);
     }
 
     public async Task<List<GenericTrack>> SearchTrackAsync(string serverUrl, string artist, string album, string title)

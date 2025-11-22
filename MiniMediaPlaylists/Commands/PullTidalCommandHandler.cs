@@ -10,10 +10,12 @@ namespace MiniMediaPlaylists.Commands;
 public class PullTidalCommandHandler
 {
     private readonly TidalRepository _tidalRepository;
+    private readonly SnapshotRepository _snapshotRepository;
 
     public PullTidalCommandHandler(string connectionString)
     {
         _tidalRepository = new TidalRepository(connectionString);
+        _snapshotRepository = new SnapshotRepository(connectionString);
     }
 
     public async Task PullTidalPlaylists(
@@ -41,6 +43,7 @@ public class PullTidalCommandHandler
         var currentUser = await tidalApiService.GetCurrentUserAsync();
         var playlists = await tidalApiService.GetPlaylistsAsync(currentUser.Data.Id);
         playlists = await GetAllPlaylistsAsync(playlists, tidalApiService);
+        Guid snapshotId = await _snapshotRepository.CreateSnapshotAsync(owner.Id, "Tidal");
 
         await AnsiConsole.Progress()
             .HideCompleted(true)
@@ -77,7 +80,8 @@ public class PullTidalCommandHandler
                             playlist.Attributes.LastModifiedAt,
                             playlist.Attributes.Privacy,
                             playlist.Attributes.AccessType,
-                            playlist.Attributes.PlaylistType);
+                            playlist.Attributes.PlaylistType,
+                            snapshotId);
 
                         var playlistInfo = await tidalApiService.GetPlaylistByIdAsync(playlist.Id);
                         playlistInfo = await GetAllTracksAsync(playlistInfo, tidalApiService);
@@ -116,7 +120,8 @@ public class PullTidalCommandHandler
                                 album.Attributes.Type,
                                 artists.FirstOrDefault()?.Attributes.Name,
                                 false,
-                                metaData?.Meta?.AddedAt ?? DateTime.Now);
+                                metaData?.Meta?.AddedAt ?? DateTime.Now,
+                                snapshotId);
 
                             task.Increment(1);
                             task.Description(Markup.Escape($"Processing Playlist '{playlist.Attributes.Name}', {task.Value} of {tracks.Count} processed"));
@@ -133,6 +138,7 @@ public class PullTidalCommandHandler
             });
         
         await _tidalRepository.SetLastSyncTimeAsync(owner.Id);
+        await _snapshotRepository.SetSnapshotCompleteAsync(snapshotId);
 
     }
     private async Task<bool> HandleTidalAuthAsync(
