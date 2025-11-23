@@ -161,7 +161,8 @@ public class SpotifyRepository
         string addedByType, 
         bool isRemoved, 
         DateTime addedAt, 
-        Guid snapshotId)
+        Guid snapshotId,
+        int playlistSortOrder)
     {
         string query = @"
             INSERT INTO playlists_spotify_playlist_track (Id,
@@ -178,10 +179,11 @@ public class SpotifyRepository
                                                    AddedByType,
                                                    IsRemoved,
                                                    AddedAt,
-                                                   SnapshotId)
+                                                   SnapshotId,
+                                                   playlist_sortorder)
             VALUES (@trackId, @playlistId, @ownerId, @albumType, @albumId,
                     @albumName, @albumReleaseDate, @albumTotalTracks, @artistName, @name,
-                    @addedById, @addedByType, @isRemoved, @addedAt, @snapshotId)
+                    @addedById, @addedByType, @isRemoved, @addedAt, @snapshotId, @playlistSortOrder)
             ON CONFLICT (Id, PlayListId, OwnerId, SnapShotId)
             DO UPDATE set
                 AlbumType = EXCLUDED.AlbumType,
@@ -215,7 +217,8 @@ public class SpotifyRepository
                 addedByType, 
                 isRemoved, 
                 addedAt,
-                snapshotId
+                snapshotId,
+                playlistSortOrder
             });
     }
     

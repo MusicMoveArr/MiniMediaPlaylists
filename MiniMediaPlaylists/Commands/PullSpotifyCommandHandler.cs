@@ -79,7 +79,7 @@ public class PullSpotifyCommandHandler
                 var totalProgressTask = ctx.AddTask(Markup.Escape($"Processing Playlists 0 of {allPlaylists.Count} processed"));
                 totalProgressTask.MaxValue = allPlaylists.Count;
 
-                if (string.IsNullOrWhiteSpace(likedSongsPlaylistName))
+                /*if (!string.IsNullOrWhiteSpace(likedSongsPlaylistName))
                 {
                     var savedTracks = new List<SavedTrack>();
                     await foreach (var savedTrack in spotifyClient.Paginate(await spotifyClient.Library.GetTracks()))
@@ -100,7 +100,7 @@ public class PullSpotifyCommandHandler
                         //Tracks = savedTracks
                         //Owner = currentUser
                     });
-                }
+                }*/
                 
                 foreach (var playlist in allPlaylists)
                 {
@@ -126,6 +126,7 @@ public class PullSpotifyCommandHandler
                         var task = ctx.AddTask(Markup.Escape($"Processing Playlist '{playlist.Name}', 0 of {allTracks.Count} processed"));
                         task.MaxValue = allTracks.Count;
 
+                        int playlistSortOrder = 1;
                         foreach (var item in allTracks)
                         {
                             if (item.Track is FullTrack track)
@@ -140,7 +141,8 @@ public class PullSpotifyCommandHandler
                                         artistIndex++);
                                 }
                         
-                                await _spotifyRepository.UpsertPlaylistTrackAsync(track.Id,
+                                await _spotifyRepository.UpsertPlaylistTrackAsync(
+                                    track.Id,
                                     playlist.Id,
                                     ownerId,
                                     track.Album.AlbumType,
@@ -154,7 +156,9 @@ public class PullSpotifyCommandHandler
                                     item.AddedBy.Type,
                                     false,
                                     item.AddedAt ?? DateTime.Now,
-                                    snapshotId);
+                                    snapshotId,
+                                    playlistSortOrder);
+                                playlistSortOrder++;
                             }
                             task.Increment(1);
                             task.Description(Markup.Escape($"Processing Playlist '{playlist.Name}', {task.Value} of {allTracks.Count} processed"));
