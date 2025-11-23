@@ -26,6 +26,7 @@ Loving the work I do? buy me a coffee https://buymeacoffee.com/musicmovearr
 2. Store the playlists locally as a "backup"
 3. Cross-Sync between the providers e.g. Spotify <-> Plex <-> SubSonic/Navidrome
 4. Cross-Sync the liked songs + the song ratings
+5. Parallel processing of Playlists/Tracks
 
 # Commands
 1. Sync - Sync playlists between 2 services
@@ -110,9 +111,12 @@ services:
 | Sync | --to-jellyfin-password | Jellyfin password for authentication. | xxxxxxx |
 | Sync | --to-tidal-country-code | Tidal's CountryCode (e.g. US, FR, NL, DE etc). | US |
 | Sync | --match-percentage | The required amount of % to match a playlist track. | 90 |
-| Sync | --like-playlist-name | The name of the like/favorite songs playlist, when using this setting it will like/favorite tracks instead of adding them to a target playlist. | Liked Songs |
 | Sync | --force-add-track | Ignore thinking a song was already added to the playlist and try again anyway, useful for recovering backups. | true |
 | Sync | --deep-search | If the desired track cannot be found with the normal search method, we'll do a automated search ourself going through the artists, albums to find it. | true |
+| Sync | --from-like-playlist-name | The name of the like/favorite songs playlist, when using this setting it will like/favorite tracks instead of adding them to a target playlist. | Liked Songs |
+| Sync | --to-like-playlist-name | The name of the like/favorite songs playlist, when using this setting it will like/favorite tracks instead of adding them to a target playlist. | Starred Songs |
+| Sync | --playlist-threads | The amount of threads to use for parallel processing. | 10 |
+| Sync | --track-threads | The amount of threads to use for parallel processing each track of a playlist. | 2 |
 
 # Pull Spotify playlists
 Personally I would say, since the first authentication with Spotify requires now a HTTPS connection, create a account at https://ngrok.com
