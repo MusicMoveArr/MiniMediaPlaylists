@@ -109,6 +109,7 @@ public class PullSubSonicCommandHandler
                         var task = ctx.AddTask(Markup.Escape($"Processing Playlist '{playlist.Name}', 0 of {tracks.Count} processed"));
                         task.MaxValue = tracks.Count;
 
+                        int playlistSortOrder = 1;
                         foreach (var track in tracks)
                         {
                             await _subSonicRepository.UpsertPlaylistTrackAsync(
@@ -126,7 +127,9 @@ public class PullSubSonicCommandHandler
                                 track.Year ?? 0,
                                 DateTime.Now,
                                 track.UserRating ?? 0,
-                                snapshotId);
+                                snapshotId,
+                                playlistSortOrder);
+                            playlistSortOrder++;
                             task.Increment(1);
                             task.Description(Markup.Escape($"Processing Playlist '{playlist.Name}', {task.Value} of {tracks.Count} processed"));
                         }

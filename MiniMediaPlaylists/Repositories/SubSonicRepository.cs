@@ -130,7 +130,8 @@ public class SubSonicRepository
         int year,
         DateTime addedAt,
         int userRating, 
-        Guid snapshotId)
+        Guid snapshotId,
+        int playlistSortOrder)
     {
         if (string.IsNullOrWhiteSpace(album))
         {
@@ -176,9 +177,11 @@ public class SubSonicRepository
                                                    IsRemoved,
                                                    AddedAt,
                                                    UserRating,
-                                                   SnapshotId)
+                                                   SnapshotId,
+                                                   playlist_sortorder)
             VALUES (@trackId, @playlistId, @serverId, @album, @albumId, @artist, @artistId,
-                    @duration, @title, @path, @size, @year, @isRemoved, @addedAt, @userRating, @snapshotId)
+                    @duration, @title, @path, @size, @year, @isRemoved, @addedAt, @userRating, 
+                    @snapshotId, @playlistSortOrder)
             ON CONFLICT (Id, PlayListId, ServerId, SnapShotId)
             DO UPDATE set
                 album = EXCLUDED.album,
@@ -213,7 +216,8 @@ public class SubSonicRepository
                 isRemoved = false,
                 addedAt,
                 userRating,
-                snapshotId
+                snapshotId,
+                playlistSortOrder
             });
     }
     

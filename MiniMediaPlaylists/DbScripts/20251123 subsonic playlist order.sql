@@ -1,0 +1,1 @@
+alter table playlists_subsonic_playlist_track add column playlist_sortorder int default 0;
