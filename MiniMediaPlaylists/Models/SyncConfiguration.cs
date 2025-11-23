@@ -37,4 +37,6 @@ public class SyncConfiguration
     
     public required bool ForceAddTrack { get; init; }
     public required bool DeepSearchThroughArtist { get; init; }
+    public required int PlaylistThreads { get; init; }
+    public required int TrackThreads { get; init; }
 }

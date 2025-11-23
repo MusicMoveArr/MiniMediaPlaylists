@@ -79,7 +79,7 @@ public class SyncCommandHandler
                 totalProgressTask.MaxValue = fromPlaylists.Count;
                 
                 int playlistProgress = 0;
-                await ParallelHelper.ForEachAsync(fromPlaylists, 1, async fromPlaylist =>
+                await ParallelHelper.ForEachAsync(fromPlaylists, syncConfiguration.PlaylistThreads, async fromPlaylist =>
                 {
                     var toPlayList = toPlaylists.FirstOrDefault(playlist => 
                         string.Equals(playlist.Name, syncConfiguration.ToPlaylistPrefix + fromPlaylist.Name));
@@ -99,8 +99,8 @@ public class SyncCommandHandler
 
                     var task = ctx.AddTask(Markup.Escape($"Processing Playlist '{fromPlaylist.Name}', 0 of {fromTracks.Count} processed"));
                     task.MaxValue = fromTracks.Count;
-
-                    foreach (var fromTrack in fromTracks)
+                    
+                    await ParallelHelper.ForEachAsync(fromTracks, syncConfiguration.TrackThreads, async fromTrack =>
                     {
                         try
                         {
@@ -112,7 +112,7 @@ public class SyncCommandHandler
                                 {
                                     task.Value++;
                                     task.Description(Markup.Escape(Markup.Escape($"Processing Playlist '{fromPlaylist.Name}', {task.Value} of {fromTracks.Count} processed")));
-                                    continue;
+                                    return;
                                 }
                             }
 
@@ -172,7 +172,7 @@ public class SyncCommandHandler
 
                         task.Value++;
                         task.Description(Markup.Escape(Markup.Escape($"Processing Playlist '{fromPlaylist.Name}', {task.Value} of {fromTracks.Count} processed")));
-                    }
+                    });
 
                     totalProgressTask.Value++;
                     totalProgressTask.Description(Markup.Escape($"Processing Playlists {totalProgressTask.Value} of {fromPlaylists.Count} processed"));

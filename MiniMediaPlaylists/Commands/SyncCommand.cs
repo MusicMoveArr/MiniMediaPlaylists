@@ -173,6 +173,17 @@ public class SyncPlexCommand : ICommand
         EnvironmentVariable = "SYNC_DEEP_SEARCH")]
     public bool DeepSearchThroughArtist { get; init; }
 
+    [CommandOption("playlist-threads",
+        Description = "The amount of threads to use for parallel processing.",
+        IsRequired = false,
+        EnvironmentVariable = "SYNC_PLAYLIST_THREADS")]
+    public int PlaylistThreads { get; init; } = 1;
+    
+    [CommandOption("track-threads",
+        Description = "The amount of threads to use for parallel processing each track of a playlist.",
+        IsRequired = false,
+        EnvironmentVariable = "SYNC_TRACK_THREADS")]
+    public int TrackThreads { get; init; } = 1;
 
     public async ValueTask ExecuteAsync(IConsole console)
     {
@@ -207,6 +218,8 @@ public class SyncPlexCommand : ICommand
             ToLikePlaylistName = ToLikePlaylistName,
             ForceAddTrack = ForceAddTrack,
             DeepSearchThroughArtist = DeepSearchThroughArtist,
+            PlaylistThreads = PlaylistThreads,
+            TrackThreads = TrackThreads
         };
 
         await handler.SyncPlaylists(syncConfig);
