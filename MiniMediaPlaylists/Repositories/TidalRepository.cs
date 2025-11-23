@@ -254,4 +254,28 @@ public class TidalRepository
                 snapshotId
             })).ToList();
     }
+    
+    public async Task<List<GenericTrack>> GetPlaylistTracksByNameAsync(string ownerId, string name, Guid snapshotId)
+    {
+        string query = @"select
+                             track.id as Id,
+                             track.ArtistName as ArtistName,
+                             track.AlbumTitle as AlbumName,
+                             track.Title as Title
+                         from playlists_tidal_owner ppo
+                         join playlists_tidal_playlist list on list.ownerid = ppo.id and list.snapshotId = @snapshotId
+                         join playlists_tidal_playlist_track track on track.ownerid = ppo.id and track.playlistid = list.id and track.snapshotId = @snapshotId
+                         where ppo.ownerid = @ownerId
+                         and list.name = @name";
+
+        await using var conn = new NpgsqlConnection(_connectionString);
+
+        return (await conn.QueryAsync<GenericTrack>(query, 
+            param: new
+            {
+                ownerId,
+                name,
+                snapshotId
+            })).ToList();
+    }
 }

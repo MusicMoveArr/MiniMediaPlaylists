@@ -29,6 +29,11 @@ public class TidalService : IProviderService
         return await _tidalRepository.GetPlaylistTracksAsync(serverUrl, playlistId, snapshotId);
     }
 
+    public async Task<List<GenericTrack>> GetPlaylistTracksByNameAsync(string serverUrl, string name, Guid snapshotId)
+    {
+        return await _tidalRepository.GetPlaylistTracksByNameAsync(serverUrl, name, snapshotId);
+    }
+
     public async Task<GenericPlaylist> CreatePlaylistAsync(string serverUrl, string name)
     {
         await AuthenticateAsync();

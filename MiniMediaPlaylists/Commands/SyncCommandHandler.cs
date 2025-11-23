@@ -84,7 +84,7 @@ public class SyncCommandHandler
                     var toPlayList = toPlaylists.FirstOrDefault(playlist => 
                         string.Equals(playlist.Name, syncConfiguration.ToPlaylistPrefix + fromPlaylist.Name));
 
-                    bool isLikePlaylist = string.Equals(fromPlaylist.Name, syncConfiguration.LikePlaylistName);
+                    bool isLikePlaylist = string.Equals(fromPlaylist.Name, syncConfiguration.FromLikePlaylistName);
                     if (toPlayList == null)
                     {
                         //create non-existing playlist on "to" service
@@ -94,7 +94,7 @@ public class SyncCommandHandler
 
                     var fromTracks = await _fromProvider.GetPlaylistTracksAsync(syncConfiguration.FromName, fromPlaylist.Id, fromSnapshotId);
                     var toTracks =
-                        string.IsNullOrWhiteSpace(toPlayList?.Id) || isLikePlaylist ? [] :
+                        isLikePlaylist ? await _toProvider.GetPlaylistTracksByNameAsync(syncConfiguration.ToName, syncConfiguration.ToLikePlaylistName, toSnapshotId) :
                         await _toProvider.GetPlaylistTracksAsync(syncConfiguration.ToName, toPlayList.Id, toSnapshotId);
 
                     var task = ctx.AddTask(Markup.Escape($"Processing Playlist '{fromPlaylist.Name}', 0 of {fromTracks.Count} processed"));
@@ -106,15 +106,9 @@ public class SyncCommandHandler
                         {
                             if (!syncConfiguration.ForceAddTrack)
                             {
-                                var toTrackExists = toTracks
-                                    .Where(track => Fuzz.Ratio(track.ArtistName.ToLower(), fromTrack.ArtistName.ToLower()) >= syncConfiguration.MatchPercentage)
-                                    .Where(track => Fuzz.Ratio(track.AlbumName.ToLower(), fromTrack.AlbumName.ToLower()) >= syncConfiguration.MatchPercentage)
-                                    .Where(track => Fuzz.Ratio(track.Title.ToLower(), fromTrack.Title.ToLower()) >= syncConfiguration.MatchPercentage)
-                                    .Where(track => FuzzyHelper.ExactNumberMatch(track.ArtistName, fromTrack.ArtistName))
-                                    .Where(track => FuzzyHelper.ExactNumberMatch(track.AlbumName, fromTrack.AlbumName))
-                                    .Any(track => FuzzyHelper.ExactNumberMatch(track.Title, fromTrack.Title));
-
-                                if (toTrackExists)
+                                var toTrack = FindTrack(toTracks, syncConfiguration, fromTrack);
+                                
+                                if (toTrack != null)
                                 {
                                     task.Value++;
                                     task.Description(Markup.Escape(Markup.Escape($"Processing Playlist '{fromPlaylist.Name}', {task.Value} of {fromTracks.Count} processed")));

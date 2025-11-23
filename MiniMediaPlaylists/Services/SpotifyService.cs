@@ -43,6 +43,11 @@ public class SpotifyService : IProviderService
         return await _spotifyRepository.GetPlaylistTracksAsync(serverUrl, playlistId, snapshotId);
     }
 
+    public async Task<List<GenericTrack>> GetPlaylistTracksByNameAsync(string serverUrl, string name, Guid snapshotId)
+    {
+        return await _spotifyRepository.GetPlaylistTracksByNameAsync(serverUrl, name, snapshotId);
+    }
+
     public async Task<List<GenericTrack>> SearchTrackAsync(string serverUrl, string artist, string album, string title)
     {
         if (_spotifyClient == null)

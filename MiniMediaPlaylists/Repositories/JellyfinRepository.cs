@@ -260,4 +260,28 @@ public class JellyfinRepository
                 snapshotId
             })).ToList();
     }
+    
+    public async Task<List<GenericTrack>> GetPlaylistTracksByNameAsync(string username, string name, Guid snapshotId)
+    {
+        string query = @"select
+                             track.id as Id,
+                             track.Artist as ArtistName,
+                             track.Album as AlbumName,
+                             track.Title as Title
+                         from playlists_jellyfin_owner ppo
+                         join playlists_jellyfin_playlist list on list.ownerid = ppo.id and list.snapshotId = @snapshotId
+                         join playlists_jellyfin_playlist_track track on track.ownerid = ppo.id and track.playlistid = list.id and track.snapshotId = @snapshotId
+                         where ppo.username = @username
+                         and list.name = @name";
+
+        await using var conn = new NpgsqlConnection(_connectionString);
+
+        return (await conn.QueryAsync<GenericTrack>(query, 
+            param: new
+            {
+                username,
+                name,
+                snapshotId
+            })).ToList();
+    }
 }

@@ -149,11 +149,17 @@ public class SyncPlexCommand : ICommand
         EnvironmentVariable = "SYNC_MATCHPERCENTAGE")]
     public int MatchPercentage { get; init; } = 90;
 
-    [CommandOption("like-playlist-name",
+    [CommandOption("from-like-playlist-name",
         Description = "The name of the like/favorite songs playlist, when using this setting it will like/favorite tracks instead of adding them to a target playlist.",
         IsRequired = false,
-        EnvironmentVariable = "SYNC_LIKE_PLAYLIST_NAME")]
-    public string LikePlaylistName { get; init; }
+        EnvironmentVariable = "SYNC_FROM_LIKE_PLAYLIST_NAME")]
+    public string FromLikePlaylistName { get; init; }
+
+    [CommandOption("to-like-playlist-name",
+        Description = "The name of the like/favorite songs playlist, when using this setting it will like/favorite tracks instead of adding them to a target playlist.",
+        IsRequired = false,
+        EnvironmentVariable = "SYNC_TO_LIKE_PLAYLIST_NAME")]
+    public string ToLikePlaylistName { get; init; }
 
     [CommandOption("force-add-track",
         Description = "Ignore thinking a song was already added to the playlist and try again anyway, useful for recovering backups.",
@@ -197,7 +203,8 @@ public class SyncPlexCommand : ICommand
             ToTidalCountryCode = ToTidalCountryCode,
             
             MatchPercentage = MatchPercentage,
-            LikePlaylistName = LikePlaylistName,
+            FromLikePlaylistName = FromLikePlaylistName,
+            ToLikePlaylistName = ToLikePlaylistName,
             ForceAddTrack = ForceAddTrack,
             DeepSearchThroughArtist = DeepSearchThroughArtist,
         };

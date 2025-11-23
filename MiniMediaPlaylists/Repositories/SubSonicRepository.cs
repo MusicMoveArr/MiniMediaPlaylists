@@ -260,4 +260,29 @@ public class SubSonicRepository
                 snapshotId
             })).ToList();
     }
+    
+    public async Task<List<GenericTrack>> GetPlaylistTracksByNameAsync(string serverUrl, string name, Guid snapshotId)
+    {
+        string query = @"select
+                             track.id as Id,
+                             track.Artist as ArtistName,
+                             track.Album as AlbumName,
+                             track.title as Title,
+                             track.UserRating as LikeRating
+                         from playlists_subsonic_server pps 
+                         join playlists_subsonic_playlist list on list.serverid = pps.id and list.snapshotId = @snapshotId
+                         join playlists_subsonic_playlist_track track on track.serverid = pps.id and track.playlistid = list.id and track.snapshotId = @snapshotId
+                         where pps.serverurl = @serverUrl
+                         and list.name = @name";
+
+        await using var conn = new NpgsqlConnection(_connectionString);
+
+        return (await conn.QueryAsync<GenericTrack>(query, 
+            param: new
+            {
+                serverUrl,
+                name,
+                snapshotId
+            })).ToList();
+    }
 }

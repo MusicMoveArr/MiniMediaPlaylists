@@ -32,7 +32,8 @@ public class SyncConfiguration
     public required string ToJellyfinPassword { get; init; }
     
     public required int MatchPercentage { get; init; }
-    public required string LikePlaylistName { get; init; }
+    public required string FromLikePlaylistName { get; init; }
+    public required string ToLikePlaylistName { get; init; }
     
     public required bool ForceAddTrack { get; init; }
     public required bool DeepSearchThroughArtist { get; init; }

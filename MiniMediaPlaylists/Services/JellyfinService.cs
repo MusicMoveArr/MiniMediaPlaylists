@@ -27,6 +27,11 @@ public class JellyfinService : IProviderService
         return await _jellyfinRepository.GetPlaylistTracksAsync(serverUrl, playlistId, snapshotId);
     }
 
+    public async Task<List<GenericTrack>> GetPlaylistTracksByNameAsync(string serverUrl, string name, Guid snapshotId)
+    {
+        return await _jellyfinRepository.GetPlaylistTracksByNameAsync(serverUrl, name, snapshotId);
+    }
+
     public async Task<GenericPlaylist> CreatePlaylistAsync(string serverUrl, string name)
     {
         var dbAuthInfo = await _jellyfinRepository.GetOwnerByNameAsync(_syncConfiguration.ToJellyfinUsername, serverUrl);

@@ -320,6 +320,31 @@ public class PlexRepository
             })).ToList();
     }
     
+    public async Task<List<GenericTrack>> GetPlaylistTracksByNameAsync(string serverUrl, string name, Guid snapshotId)
+    {
+        string query = @"select
+                             track.ratingkey as Id,
+                             track.GrandParentTitle as ArtistName,
+                             track.ParentTitle as AlbumName,
+                             track.title as Title,
+                             track.UserRating as LikeRating
+                         from playlists_plex_server pps 
+                         join playlists_plex_playlist list on list.serverid = pps.id and list.snapshotId = @snapshotId
+                         join playlists_plex_playlist_track track on track.serverid = pps.id and track.playlistid = list.ratingkey and track.snapshotId = @snapshotId
+                         where pps.serverurl = @serverUrl
+                         and list.title = @name";
+
+        await using var conn = new NpgsqlConnection(_connectionString);
+
+        return (await conn.QueryAsync<GenericTrack>(query, 
+            param: new
+            {
+                serverUrl,
+                name,
+                snapshotId
+            })).ToList();
+    }
+    
     public async Task<bool> IsPlaylistUpdatedAsync(string serverUrl, string playlistId, long addedAt, long updatedAt, Guid snapshotId)
     {
         string query = @"select

@@ -33,6 +33,11 @@ public class SubSonicService : IProviderService
         return await _subSonicRepository.GetPlaylistTracksAsync(serverUrl, playlistId, snapshotId);
     }
 
+    public async Task<List<GenericTrack>> GetPlaylistTracksByNameAsync(string serverUrl, string name, Guid snapshotId)
+    {
+        return await _subSonicRepository.GetPlaylistTracksByNameAsync(serverUrl, name, snapshotId);
+    }
+
     public async Task<GenericPlaylist> CreatePlaylistAsync(string serverUrl, string name)
     {
         var connection = new SubsonicConnectionInfo(

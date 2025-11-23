@@ -42,6 +42,11 @@ public class PlexService : IProviderService
         return await _plexRepository.GetPlaylistTracksAsync(serverUrl, playlistId, snapshotId);
     }
 
+    public async Task<List<GenericTrack>> GetPlaylistTracksByNameAsync(string serverUrl, string name, Guid snapshotId)
+    {
+        return await _plexRepository.GetPlaylistTracksByNameAsync(serverUrl, name, snapshotId);
+    }
+
     public async Task<List<GenericTrack>> SearchTrackAsync(string serverUrl, string artist, string album, string title)
     {
         string searchTerm = $"{artist} {title}";
