@@ -149,7 +149,8 @@ public class PlexRepository
         PlexTrackModel trackModel,
         string playListId,
         Guid serverId, 
-        Guid snapshotId)
+        Guid snapshotId,
+        int playlistSortOrder)
     {
         if (string.IsNullOrWhiteSpace(trackModel.ParentStudio))
         {
@@ -190,7 +191,8 @@ public class PlexRepository
                                                    LastViewedAt,
                                                    LastRatedAt,
                                                    AddedAt,
-                                                   SnapshotId)
+                                                   SnapshotId,
+                                                   playlist_sortorder)
             VALUES (@RatingKey,
                     @PlayListId,
                     @ServerId,
@@ -216,7 +218,8 @@ public class PlexRepository
                     @LastViewedAt,
                     @LastRatedAt,
                     @AddedAt,
-                    @snapshotId)
+                    @snapshotId,
+                    @playlistSortOrder)
             ON CONFLICT (RatingKey, PlayListId, ServerId, SnapShotId)
             DO UPDATE set
                 Key = EXCLUDED.Key,
@@ -272,7 +275,8 @@ public class PlexRepository
                 LastViewedAt = DateTimeOffset.FromUnixTimeSeconds(trackModel.LastViewedAt).DateTime,
                 LastRatedAt = DateTimeOffset.FromUnixTimeSeconds(trackModel.LastRatedAt).DateTime,
                 AddedAt = DateTimeOffset.FromUnixTimeSeconds(trackModel.AddedAt).DateTime,
-                snapshotId
+                snapshotId,
+                playlistSortOrder
             });
     }
     

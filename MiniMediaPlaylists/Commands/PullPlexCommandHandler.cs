@@ -44,7 +44,6 @@ public class PullPlexCommandHandler
                 totalProgressTask.MaxValue = playlists.MediaContainer.Metadata.Count;
                  foreach (var playlist in playlists.MediaContainer.Metadata)
                  {
-                     
                      try
                      {
                          if (playlist.LeafCount > trackLimit)
@@ -59,7 +58,7 @@ public class PullPlexCommandHandler
                          //}
                          
                          await _plexRepository.UpsertPlaylistAsync(playlist, serverId, snapshotId);
-                     
+
                          var tracks = await plexApiService.GetPlaylistTracksAsync(serverUrl, token, playlist.RatingKey);
          
                          if (tracks?.MediaContainer?.Metadata == null ||
@@ -69,12 +68,14 @@ public class PullPlexCommandHandler
                          }
                          var task = ctx.AddTask(Markup.Escape($"Processing Playlist '{playlist.Title}', 0 of {tracks.MediaContainer.Metadata.Count} processed"));
                          task.MaxValue = tracks.MediaContainer.Metadata.Count;
-                         
+
+                         int playlistSortOrder = 1;
                          foreach (var track in tracks.MediaContainer.Metadata)
                          {
                              task.Value++;
                              task.Description(Markup.Escape($"Processing Playlists '{playlist.Title}', {task.Value} of {tracks.MediaContainer.Metadata.Count} processed"));
-                             await _plexRepository.UpsertPlaylistTrackAsync(track, playlist.RatingKey, serverId, snapshotId);
+                             await _plexRepository.UpsertPlaylistTrackAsync(track, playlist.RatingKey, serverId, snapshotId, playlistSortOrder);
+                             playlistSortOrder++;
                          }
                      }
                      catch (Exception e)
