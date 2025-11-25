@@ -44,183 +44,6 @@ public class SubSonicRepository
         });
     }
     
-    public async Task<Guid> UpsertPlaylistAsync(
-        string playlistId,
-        Guid serverId, 
-        DateTime changedAt,
-        DateTime createdAt,
-        string comment,
-        int duration,
-        string name,
-        string owner, 
-        bool isPublic,
-        int songCount, 
-        Guid snapshotId)
-    {
-        if (string.IsNullOrWhiteSpace(comment))
-        {
-            comment = string.Empty;
-        }
-        if (string.IsNullOrWhiteSpace(name))
-        {
-            name = string.Empty;
-        }
-        if (string.IsNullOrWhiteSpace(owner))
-        {
-            owner = string.Empty;
-        }
-        
-        string query = @"
-            INSERT INTO playlists_subsonic_playlist (Id,
-                                                   ServerId,
-                                                   ChangedAt,
-                                                   CreatedAt,
-                                                   Comment,
-                                                   Duration,
-                                                   Name,
-                                                   Owner,
-                                                   Public,
-                                                   SongCount,
-                                                   SnapshotId)
-            VALUES (@playlistId, @serverId, @changedAt, @createdAt, @comment,
-                    @duration, @name, @owner, @isPublic, @songCount, @snapshotId)
-            ON CONFLICT (Id, ServerId, SnapShotId)
-            DO UPDATE set
-                ChangedAt = EXCLUDED.ChangedAt,
-                CreatedAt = EXCLUDED.CreatedAt,
-                Comment = EXCLUDED.Comment,
-                Duration = EXCLUDED.Duration,
-                Name = EXCLUDED.Name,
-                Owner = EXCLUDED.Owner,
-                Public = EXCLUDED.Public,
-                SongCount = EXCLUDED.SongCount";
-
-        await using var conn = new NpgsqlConnection(_connectionString);
-
-        return await conn.ExecuteScalarAsync<Guid>(query, 
-            param: new
-            {
-                playlistId,
-                serverId,
-                changedAt,
-                createdAt,
-                comment,
-                duration,
-                name,
-                owner,
-                isPublic,
-                songCount,
-                snapshotId
-            });
-    }
-    
-    
-    public async Task UpsertPlaylistTrackAsync(
-        string trackId,
-        Guid serverId, 
-        string playlistId, 
-        string album,
-        string albumId,
-        string artist,
-        string artistId,
-        int duration, 
-        string title,
-        string path,
-        long size,
-        int year,
-        DateTime addedAt,
-        int userRating, 
-        Guid snapshotId,
-        int playlistSortOrder)
-    {
-        if (string.IsNullOrWhiteSpace(album))
-        {
-            album = string.Empty;
-        }
-        if (string.IsNullOrWhiteSpace(albumId))
-        {
-            albumId = string.Empty;
-        }
-        if (string.IsNullOrWhiteSpace(artist))
-        {
-            artist = string.Empty;
-        }
-        if (string.IsNullOrWhiteSpace(artistId))
-        {
-            artistId = string.Empty;
-        }
-        if (string.IsNullOrWhiteSpace(title))
-        {
-            title = string.Empty;
-        }
-        if (string.IsNullOrWhiteSpace(path))
-        {
-            path = string.Empty;
-        }
-        
-        
-        
-        
-        string query = @"
-            INSERT INTO playlists_subsonic_playlist_track (Id,
-                                                   PlayListId,
-                                                   ServerId,
-                                                   Album,
-                                                   AlbumId,
-                                                   Artist,
-                                                   ArtistId,
-                                                   Duration,
-                                                   Title,
-                                                   Path,
-                                                   Size,
-                                                   Year,
-                                                   IsRemoved,
-                                                   AddedAt,
-                                                   UserRating,
-                                                   SnapshotId,
-                                                   playlist_sortorder)
-            VALUES (@trackId, @playlistId, @serverId, @album, @albumId, @artist, @artistId,
-                    @duration, @title, @path, @size, @year, @isRemoved, @addedAt, @userRating, 
-                    @snapshotId, @playlistSortOrder)
-            ON CONFLICT (Id, PlayListId, ServerId, SnapShotId)
-            DO UPDATE set
-                album = EXCLUDED.album,
-                albumId = EXCLUDED.albumId,
-                artist = EXCLUDED.artist,
-                artistId = EXCLUDED.artistId,
-                Duration = EXCLUDED.Duration,
-                title = EXCLUDED.title,
-                path = EXCLUDED.path,
-                size = EXCLUDED.size,
-                year = EXCLUDED.year,
-                addedAt = EXCLUDED.addedAt,
-                UserRating = EXCLUDED.UserRating";
-
-        await using var conn = new NpgsqlConnection(_connectionString);
-
-        await conn.ExecuteAsync(query, 
-            param: new
-            {
-                trackId,
-                playlistId,
-                serverId,
-                album,
-                albumId,
-                artist,
-                artistId,
-                duration,
-                title,
-                path,
-                size,
-                year,
-                isRemoved = false,
-                addedAt,
-                userRating,
-                snapshotId,
-                playlistSortOrder
-            });
-    }
-    
     public async Task<List<GenericPlaylist>> GetPlaylistsAsync(string serverUrl, Guid snapshotId)
     {
         string query = @"select
@@ -247,12 +70,14 @@ public class SubSonicRepository
                              track.Artist as ArtistName,
                              track.Album as AlbumName,
                              track.title as Title,
-                             track.UserRating as LikeRating
+                             track.UserRating as LikeRating,
+                             track.playlist_sortorder AS PlaylistSortOrder
                          from playlists_subsonic_server pps 
                          join playlists_subsonic_playlist list on list.serverid = pps.id and list.snapshotId = @snapshotId
                          join playlists_subsonic_playlist_track track on track.serverid = pps.id and track.playlistid = list.id and track.snapshotId = @snapshotId
                          where pps.serverurl = @serverUrl
-                         and list.id = @playlistId";
+                         and list.id = @playlistId
+                         order by track.playlist_sortorder desc";
 
         await using var conn = new NpgsqlConnection(_connectionString);
 

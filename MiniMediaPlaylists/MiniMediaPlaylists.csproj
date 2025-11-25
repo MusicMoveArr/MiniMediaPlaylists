@@ -14,12 +14,14 @@
 
     <ItemGroup>
       <Folder Include="Models\Deezer\" />
-      <Folder Include="Models\SubSonic\" />
     </ItemGroup>
 
     <ItemGroup>
       <PackageReference Include="CliFx" Version="2.3.6" />
       <PackageReference Include="Dapper" Version="2.1.66" />
+      <PackageReference Include="Dapper.Bulk" Version="1.6.0" />
+      <PackageReference Include="DapperBulkQueries.Common" Version="1.9001.512" />
+      <PackageReference Include="DapperBulkQueries.Npgsql" Version="1.9001.512" />
       <PackageReference Include="dbup-postgresql" Version="6.1.5" />
       <PackageReference Include="FuzzySharp" Version="2.0.2" />
       <PackageReference Include="Npgsql" Version="9.0.4" />

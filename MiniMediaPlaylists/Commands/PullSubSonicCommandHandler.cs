@@ -1,20 +1,28 @@
 using System.Security.Cryptography;
 using System.Text;
+using MiniMediaPlaylists.Models.SubsonicDto;
 using MiniMediaPlaylists.Repositories;
+using Npgsql;
 using Spectre.Console;
 using SubSonicMedia;
 using SubSonicMedia.Models;
 using SubSonicMedia.Responses.Playlists.Models;
 using SubSonicMedia.Responses.Search.Models;
+using DapperBulkQueries.Common;
+using DapperBulkQueries.Npgsql;
 
 namespace MiniMediaPlaylists.Commands;
 
 public class PullSubSonicCommandHandler
 {
+    private readonly string _connectionString;
     private readonly SubSonicRepository _subSonicRepository;
     private readonly SnapshotRepository _snapshotRepository;
+
+    
     public PullSubSonicCommandHandler(string connectionString)
     {
+        _connectionString = connectionString;
         _subSonicRepository = new SubSonicRepository(connectionString);
         _snapshotRepository = new SnapshotRepository(connectionString);
     }
@@ -36,6 +44,9 @@ public class PullSubSonicCommandHandler
         Guid serverId = await _subSonicRepository.UpsertServerAsync(serverUrl);
         Guid snapshotId = await _snapshotRepository.CreateSnapshotAsync(serverId, "Subsonic");
 
+        List<SubsonicPlaylistDto> playlistDtos = new List<SubsonicPlaylistDto>();
+        List<SubsonicPlaylistTrackDto> trackDtos = new List<SubsonicPlaylistTrackDto>();
+        
         await AnsiConsole.Progress()
             .HideCompleted(true)
             .AutoClear(true)
@@ -75,23 +86,26 @@ public class PullSubSonicCommandHandler
                         SongCount = 0
                     });
                 }
-                
+
                 foreach (var playlist in playlists.Playlists.Playlist)
                 {
                     try
                     {
-                        await _subSonicRepository.UpsertPlaylistAsync(playlist.Id, 
-                            serverId, 
-                            playlist.Changed,
-                            playlist.Created,
-                            playlist.Comment,
-                            playlist.Duration,
-                            playlist.Name,
-                            playlist.Owner,
-                            playlist.Public,
-                            playlist.SongCount,
-                            snapshotId);
-
+                        playlistDtos.Add(new SubsonicPlaylistDto
+                        {
+                            Id = playlist.Id,
+                            Name = !string.IsNullOrWhiteSpace(playlist.Name) ? playlist.Name : string.Empty,
+                            Owner = !string.IsNullOrWhiteSpace(playlist.Owner) ? playlist.Owner : string.Empty,
+                            Public = playlist.Public,
+                            SongCount = playlist.SongCount,
+                            ChangedAt = playlist.Changed,
+                            CreatedAt = playlist.Created,
+                            Comment = !string.IsNullOrWhiteSpace(playlist.Comment) ? playlist.Comment : string.Empty,
+                            Duration = playlist.Duration,
+                            ServerId = serverId,
+                            SnapshotId = snapshotId
+                        });
+                        
                         List<Song> tracks = new List<Song>();
                         if (!string.IsNullOrWhiteSpace(genLikedPlaylistName) &&
                             string.Equals(genLikedPlaylistName, playlist.Id))
@@ -108,31 +122,53 @@ public class PullSubSonicCommandHandler
                         
                         var task = ctx.AddTask(Markup.Escape($"Processing Playlist '{playlist.Name}', 0 of {tracks.Count} processed"));
                         task.MaxValue = tracks.Count;
-
                         int playlistSortOrder = 1;
-                        foreach (var track in tracks)
+                        
+                        trackDtos.AddRange(tracks.Select(track => new SubsonicPlaylistTrackDto
                         {
-                            await _subSonicRepository.UpsertPlaylistTrackAsync(
-                                track.Id,
-                                serverId,
-                                playlist.Id,
-                                track.Album,
-                                track.AlbumId,
-                                track.Artist,
-                                track.ArtistId,
-                                track.Duration,
-                                track.Title,
-                                track.Path,
-                                track.Size,
-                                track.Year ?? 0,
-                                DateTime.Now,
-                                track.UserRating ?? 0,
-                                snapshotId,
-                                playlistSortOrder);
-                            playlistSortOrder++;
-                            task.Increment(1);
-                            task.Description(Markup.Escape($"Processing Playlist '{playlist.Name}', {task.Value} of {tracks.Count} processed"));
+                            Id = track.Id,
+                            Title = !string.IsNullOrWhiteSpace(track.Title) ? track.Title : string.Empty,
+                            Artist = !string.IsNullOrWhiteSpace(track.Artist) ? track.Artist : string.Empty,
+                            Album = !string.IsNullOrWhiteSpace(track.Album) ? track.Album : string.Empty,
+                            AlbumId = !string.IsNullOrWhiteSpace(track.AlbumId) ? track.AlbumId : string.Empty,
+                            Duration = track.Duration,
+                            Path = !string.IsNullOrWhiteSpace(track.Path) ? track.Path : string.Empty,
+                            ServerId = serverId,
+                            SnapshotId = snapshotId,
+                            AddedAt = DateTime.Now,
+                            ArtistId = !string.IsNullOrWhiteSpace(track.ArtistId) ? track.ArtistId : string.Empty,
+                            IsRemoved = false,
+                            Playlist_SortOrder = playlistSortOrder++,
+                            PlaylistId = playlist.Id,
+                            Size = track.Size,
+                            UserRating = track.UserRating ?? 0,
+                            Year = track.Year ?? 0
+                        }));
+
+                        if (playlistDtos.Count > 100)
+                        {
+                            await using var conn = new NpgsqlConnection(_connectionString);
+                            await conn.ExecuteBulkInsertAsync(
+                                "playlists_subsonic_playlist",
+                                playlistDtos,
+                                SubsonicPlaylistDto.PlaylistDtoColumnNames, 
+                                onConflict: OnConflict.DoNothing);
+                            playlistDtos.Clear();
                         }
+
+                        if (trackDtos.Count > 100)
+                        {
+                            await using var conn = new NpgsqlConnection(_connectionString);
+                            await conn.ExecuteBulkInsertAsync(
+                                "playlists_subsonic_playlist_track",
+                                trackDtos,
+                                SubsonicPlaylistTrackDto.PlaylistTrackDtoColumnNames, 
+                                onConflict: OnConflict.DoNothing);
+                            trackDtos.Clear();
+                        }
+                        
+                        task.Increment(tracks.Count);
+                        task.Description(Markup.Escape($"Processing Playlist '{playlist.Name}', {task.Value} of {tracks.Count} processed"));
                     }
                     catch (Exception e)
                     {
@@ -143,6 +179,29 @@ public class PullSubSonicCommandHandler
                     totalProgressTask.Description(Markup.Escape($"Processing Playlists {totalProgressTask.Value} of {playlists.Playlists.Playlist.Count} processed"));
                 }
             });
+        
+        if (playlistDtos.Any())
+        {
+            await using var conn = new NpgsqlConnection(_connectionString);
+            await conn.ExecuteBulkInsertAsync(
+                "playlists_subsonic_playlist",
+                playlistDtos,
+                SubsonicPlaylistDto.PlaylistDtoColumnNames, 
+                onConflict: OnConflict.DoNothing);
+            playlistDtos.Clear();
+        }
+
+        if (trackDtos.Any())
+        {
+            await using var conn = new NpgsqlConnection(_connectionString);
+            await conn.ExecuteBulkInsertAsync(
+                "playlists_subsonic_playlist_track",
+                trackDtos,
+                SubsonicPlaylistTrackDto.PlaylistTrackDtoColumnNames, 
+                onConflict: OnConflict.DoNothing);
+            trackDtos.Clear();
+        }
+        
         await _subSonicRepository.SetLastSyncTimeAsync(serverId);
         await _snapshotRepository.SetSnapshotCompleteAsync(snapshotId);
     }
