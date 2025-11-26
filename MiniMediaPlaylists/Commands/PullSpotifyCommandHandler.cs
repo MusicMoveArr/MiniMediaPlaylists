@@ -1,7 +1,11 @@
 using System.Net;
 using System.Security.Cryptography;
 using System.Text;
+using DapperBulkQueries.Common;
+using DapperBulkQueries.Npgsql;
+using MiniMediaPlaylists.Models.SpotifyDto;
 using MiniMediaPlaylists.Repositories;
+using Npgsql;
 using Spectre.Console;
 using SpotifyAPI.Web;
 
@@ -9,12 +13,22 @@ namespace MiniMediaPlaylists.Commands;
 
 public class PullSpotifyCommandHandler
 {
+    private const int MinimumBulkInsert = 100;
+    private readonly string _connectionString;
     private readonly SpotifyRepository _spotifyRepository;
     private readonly SnapshotRepository _snapshotRepository;
+    private readonly List<SpotifyPlaylistDto> _playlistDtos;
+    private readonly List<SpotifyPlaylistTrackDto> _trackDtos;
+    private readonly List<SpotifyPlaylistTrackArtistDto> _trackArtistDtos;
+    
     public PullSpotifyCommandHandler(string connectionString)
     {
+        _connectionString = connectionString;
         _spotifyRepository = new SpotifyRepository(connectionString);
         _snapshotRepository = new SnapshotRepository(connectionString);
+        _playlistDtos = new List<SpotifyPlaylistDto>();
+        _trackDtos = new List<SpotifyPlaylistTrackDto>();
+        _trackArtistDtos = new List<SpotifyPlaylistTrackArtistDto>();
     }
 
     public async Task PullSpotifyPlaylists(
@@ -79,12 +93,12 @@ public class PullSpotifyCommandHandler
                 var totalProgressTask = ctx.AddTask(Markup.Escape($"Processing Playlists 0 of {allPlaylists.Count} processed"));
                 totalProgressTask.MaxValue = allPlaylists.Count;
 
-                /*if (!string.IsNullOrWhiteSpace(likedSongsPlaylistName))
+                if (!string.IsNullOrWhiteSpace(likedSongsPlaylistName))
                 {
-                    var savedTracks = new List<SavedTrack>();
+                    var favoritedTracks = new List<SavedTrack>();
                     await foreach (var savedTrack in spotifyClient.Paginate(await spotifyClient.Library.GetTracks()))
                     {
-                        savedTracks.Add(savedTrack);
+                        favoritedTracks.Add(savedTrack);
                     }
                     
                     string uniqueHashId =
@@ -92,29 +106,54 @@ public class PullSpotifyCommandHandler
                                 .ComputeHash(Encoding.UTF8.GetBytes(likedSongsPlaylistName)))
                             .Replace("-", string.Empty);
                     
-                    allPlaylists.Add(new FullPlaylist
+                    _playlistDtos.Add(new SpotifyPlaylistDto
                     {
                         Id = uniqueHashId,
-                        Href = string.Empty,
+                        OwnerId = ownerId,
                         Name = likedSongsPlaylistName,
-                        //Tracks = savedTracks
-                        //Owner = currentUser
+                        Href = string.Empty,
+                        Uri = string.Empty,
+                        UpdatedAt = DateTime.Now,
+                        AddedAt = DateTime.Now,
+                        TrackCount = favoritedTracks.Count,
+                        SnapshotId = snapshotId
                     });
-                }*/
+                    
+                    int playlistSortOrder = 1;
+                    foreach (var item in favoritedTracks)
+                    {
+                        if (item.Track is FullTrack track)
+                        {
+                            int artistIndex = 0;
+                            foreach (var artist in track.Artists)
+                            {
+                                _trackArtistDtos.Add(GetSpotifyTrackArtistDto(artist, track, artistIndex++));
+                            }
+                            _trackDtos.Add(GetSpotifyTrackDto(track, item, ownerId, snapshotId, playlistSortOrder++, uniqueHashId, currentUser));
+                        }
+
+                        await BulkInsertPlaylistsAsync(MinimumBulkInsert);
+                        await BulkInsertTracksAsync(MinimumBulkInsert);
+                        await BulkInsertTrackArtistsAsync(MinimumBulkInsert);
+                    }
+                }
                 
                 foreach (var playlist in allPlaylists)
                 {
                     try
                     {
-                        await _spotifyRepository.UpsertPlaylistAsync(playlist.Id,
-                            ownerId,
-                            playlist.Href,
-                            playlist.Name,
-                            playlist.Tracks.Total ?? 0,
-                            playlist.Uri,
-                            DateTime.Now,
-                            DateTime.Now,
-                            snapshotId);
+                        _playlistDtos.Add(new SpotifyPlaylistDto
+                        {
+                            Id = playlist.Id,
+                            OwnerId = ownerId,
+                            Name = playlist.Name ?? string.Empty,
+                            Href = playlist.Href ?? string.Empty,
+                            Uri = playlist.Uri ?? string.Empty,
+                            AddedAt = DateTime.Now,
+                            UpdatedAt = DateTime.Now,
+                            TrackCount = playlist.Tracks?.Total ?? 0,
+                            SnapshotId = snapshotId
+                        });
                 
                         var tracks = await spotifyClient.Playlists.GetItems(playlist.Id);
 
@@ -134,31 +173,14 @@ public class PullSpotifyCommandHandler
                                 int artistIndex = 0;
                                 foreach (var artist in track.Artists)
                                 {
-                                    await _spotifyRepository.UpsertPlaylistTrackArtistAsync(track.Id, 
-                                        artist.Id, 
-                                        track.Album.Id, 
-                                        artist.Name, 
-                                        artistIndex++);
+                                    _trackArtistDtos.Add(GetSpotifyTrackArtistDto(artist, track, artistIndex++));
                                 }
+                                
+                                _trackDtos.Add(GetSpotifyTrackDto(track, item, ownerId, snapshotId, playlistSortOrder++, playlist.Id));
                         
-                                await _spotifyRepository.UpsertPlaylistTrackAsync(
-                                    track.Id,
-                                    playlist.Id,
-                                    ownerId,
-                                    track.Album.AlbumType,
-                                    track.Album.Id,
-                                    track.Album.Name,
-                                    track.Album.ReleaseDate,
-                                    track.Album.TotalTracks,
-                                    track.Artists.FirstOrDefault().Name ?? string.Empty,
-                                    track.Name,
-                                    item.AddedBy.Id,
-                                    item.AddedBy.Type,
-                                    false,
-                                    item.AddedAt ?? DateTime.Now,
-                                    snapshotId,
-                                    playlistSortOrder);
-                                playlistSortOrder++;
+                                await BulkInsertPlaylistsAsync(MinimumBulkInsert);
+                                await BulkInsertTracksAsync(MinimumBulkInsert);
+                                await BulkInsertTrackArtistsAsync(MinimumBulkInsert);
                             }
                             task.Increment(1);
                             task.Description(Markup.Escape($"Processing Playlist '{playlist.Name}', {task.Value} of {allTracks.Count} processed"));
@@ -174,8 +196,128 @@ public class PullSpotifyCommandHandler
                 }
             });
 
+        await BulkInsertPlaylistsAsync(0);
+        await BulkInsertTracksAsync(0);
+        await BulkInsertTrackArtistsAsync(0);
+        
         await _spotifyRepository.SetLastSyncTimeAsync(ownerId);
         await _snapshotRepository.SetSnapshotCompleteAsync(snapshotId);
+    }
+    
+    private SpotifyPlaylistTrackDto GetSpotifyTrackDto(
+        FullTrack track, 
+        PlaylistTrack<IPlayableItem> item,
+        Guid ownerId,
+        Guid snapshotId,
+        int playlistSortOrder,
+        string playlistId)
+    {
+        return new SpotifyPlaylistTrackDto
+        {
+            Id = track.Id,
+            Name = track.Name ?? string.Empty,
+            AlbumName = track.Album.Name,
+            ArtistName = track.Artists.FirstOrDefault().Name ?? string.Empty,
+            AlbumId = track.Album.Id,
+            AlbumType = track.Album.AlbumType,
+            AlbumReleaseDate = track.Album.ReleaseDate,
+            AlbumTotalTracks = track.Album.TotalTracks.ToString(),
+            AddedById = item.AddedBy.Id,
+            AddedByType = item.AddedBy.Type,
+            OwnerId = ownerId,
+            AddedAt = item.AddedAt ?? DateTime.Now,
+            IsRemoved = false,
+            SnapshotId = snapshotId,
+            Playlist_SortOrder = playlistSortOrder,
+            PlaylistId = playlistId,
+        };
+    }
+
+    private SpotifyPlaylistTrackDto GetSpotifyTrackDto(
+        FullTrack track, 
+        SavedTrack item,
+        Guid ownerId,
+        Guid snapshotId,
+        int playlistSortOrder,
+        string playlistId,
+        PrivateUser currentUser)
+    {
+        return new SpotifyPlaylistTrackDto
+        {
+            Id = track.Id,
+            Name = track.Name ?? string.Empty,
+            AlbumName = track.Album.Name,
+            ArtistName = track.Artists.FirstOrDefault().Name ?? string.Empty,
+            AlbumId = track.Album.Id,
+            AlbumType = track.Album.AlbumType,
+            AlbumReleaseDate = track.Album.ReleaseDate,
+            AlbumTotalTracks = track.Album.TotalTracks.ToString(),
+            AddedById = currentUser.Id,
+            AddedByType = currentUser.Type,
+            OwnerId = ownerId,
+            AddedAt = item.AddedAt,
+            IsRemoved = false,
+            SnapshotId = snapshotId,
+            Playlist_SortOrder = playlistSortOrder,
+            PlaylistId = playlistId,
+        };
+    }
+
+    private SpotifyPlaylistTrackArtistDto GetSpotifyTrackArtistDto(
+        SimpleArtist artist, 
+        FullTrack track,
+        int artistIndex)
+    {
+        return new SpotifyPlaylistTrackArtistDto
+        {
+            TrackId = track.Id, 
+            ArtistId = artist.Id, 
+            ArtistName = artist.Name, 
+            AlbumId = track.Album.Id, 
+            Index = artistIndex
+        };
+    }
+
+    private async Task BulkInsertPlaylistsAsync(int minimumRecords)
+    {
+        if (_playlistDtos.Count > minimumRecords)
+        {
+            await using var conn = new NpgsqlConnection(_connectionString);
+            await conn.ExecuteBulkInsertAsync(
+                "playlists_spotify_playlist",
+                _playlistDtos,
+                SpotifyPlaylistDto.PlaylistDtoColumnNames, 
+                onConflict: OnConflict.DoNothing);
+            _playlistDtos.Clear();
+        }
+    }
+
+    private async Task BulkInsertTracksAsync(int minimumRecords)
+    {
+        if (_trackDtos.Count > minimumRecords)
+        {
+            await using var conn = new NpgsqlConnection(_connectionString);
+            await conn.ExecuteBulkInsertAsync(
+                "playlists_spotify_playlist_track",
+                _trackDtos,
+                SpotifyPlaylistTrackDto.PlaylistTrackDtoColumnNames, 
+                onConflict: OnConflict.DoNothing);
+            _trackDtos.Clear();
+        }
+    }
+
+    private async Task BulkInsertTrackArtistsAsync(int minimumRecords)
+    {
+        if (_trackArtistDtos.Count > minimumRecords)
+        {
+            await using var conn = new NpgsqlConnection(_connectionString);
+            await conn.ExecuteBulkInsertAsync(
+                "playlists_spotify_playlist_track_artist",
+                _trackArtistDtos,
+                SpotifyPlaylistTrackArtistDto.PlaylistTrackArtistDtoColumnNames, 
+                onConflict: OnConflict.DoNothing);
+            _trackArtistDtos.Clear();
+        }
     }
 
     private async Task<AuthorizationCodeTokenResponse> HandleSpotifyAuthAsync(
