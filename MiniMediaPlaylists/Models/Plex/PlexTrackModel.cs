@@ -14,6 +14,7 @@ public class PlexTrackModel
     public float UserRating { get; set; }
     public string ParentTitle { get; set; }
     public int ParentYear { get; set; }
+    public int PlaylistItemId { get; set; }
     public long Duration { get; set; }
     public long LastViewedAt { get; set; }
     public long LastRatedAt { get; set; }

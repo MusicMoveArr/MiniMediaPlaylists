@@ -1,0 +1,1 @@
+alter table playlists_plex_playlist_track add column playlist_itemid int default 0;

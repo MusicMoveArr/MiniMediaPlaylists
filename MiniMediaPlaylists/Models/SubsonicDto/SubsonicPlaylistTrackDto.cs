@@ -20,8 +20,6 @@ public class SubsonicPlaylistTrackDto
     public Guid SnapshotId { get; set; }
     public int Playlist_SortOrder { get; set; }
     
-    
-    
     public static readonly List<string> PlaylistTrackDtoColumnNames =
     [
         nameof(Id),

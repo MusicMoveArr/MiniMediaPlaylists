@@ -1,4 +1,5 @@
 using Dapper;
+using MiniMediaPlaylists.Interfaces;
 using MiniMediaPlaylists.Models;
 using MiniMediaPlaylists.Models.Plex;
 using Npgsql;
@@ -45,241 +46,6 @@ public class PlexRepository
         });
     }
     
-    public async Task<Guid> UpsertPlaylistAsync(
-        PlaylistModel playlistModel,
-        Guid serverId, 
-        Guid snapshotId)
-    {
-        if (string.IsNullOrWhiteSpace(playlistModel.TitleSort))
-        {
-            playlistModel.TitleSort = string.Empty;
-        }
-        if (string.IsNullOrWhiteSpace(playlistModel.Icon))
-        {
-            playlistModel.Icon = string.Empty;
-        }
-        if (string.IsNullOrWhiteSpace(playlistModel.Composite))
-        {
-            playlistModel.Composite = string.Empty;
-        }
-        
-        string query = @"
-            INSERT INTO playlists_plex_playlist (RatingKey,
-                                                 ServerId,
-                                                 Key,
-                                                 Guid,
-                                                 Type,
-                                                 Title,
-                                                 TitleSort,
-                                                 Summary,
-                                                 Smart,
-                                                 PlaylistType,
-                                                 Composite,
-                                                 Icon,
-                                                 LastViewedAt,
-                                                 Duration,
-                                                 LeafCount,
-                                                 AddedAt,
-                                                 UpdatedAt,
-                                                 SnapshotId)
-            VALUES (@RatingKey,
-                    @ServerId,
-                    @Key,
-                    @Guid,
-                    @Type,
-                    @Title,
-                    @TitleSort,
-                    @Summary,
-                    @Smart,
-                    @PlaylistType,
-                    @Composite,
-                    @Icon,
-                    @LastViewedAt,
-                    @Duration,
-                    @LeafCount,
-                    @AddedAt,
-                    @UpdatedAt,
-                    @snapshotId)
-            ON CONFLICT (RatingKey, ServerId, SnapShotId)
-            DO UPDATE set
-                Key = EXCLUDED.Key,
-                Guid = EXCLUDED.Guid,
-                Type = EXCLUDED.Type,
-                Title = EXCLUDED.Title,
-                TitleSort = EXCLUDED.TitleSort,
-                Summary = EXCLUDED.Summary,
-                Smart = EXCLUDED.Smart,
-                PlaylistType = EXCLUDED.PlaylistType,
-                Composite = EXCLUDED.Composite,
-                Icon = EXCLUDED.Icon,
-                LastViewedAt = EXCLUDED.LastViewedAt,
-                Duration = EXCLUDED.Duration,
-                LeafCount = EXCLUDED.LeafCount,
-                AddedAt = EXCLUDED.AddedAt,
-                UpdatedAt = EXCLUDED.UpdatedAt";
-
-        await using var conn = new NpgsqlConnection(_connectionString);
-
-        return await conn.ExecuteScalarAsync<Guid>(query, 
-            param: new
-            {
-                playlistModel.RatingKey,
-                serverId,
-                playlistModel.Key,
-                playlistModel.Guid,
-                playlistModel.Type,
-                playlistModel.Title,
-                playlistModel.TitleSort,
-                playlistModel.Summary,
-                playlistModel.Smart,
-                playlistModel.PlaylistType,
-                playlistModel.Composite,
-                playlistModel.Icon,
-                LastViewedAt = DateTimeOffset.FromUnixTimeSeconds(playlistModel.LastViewedAt).DateTime,
-                playlistModel.Duration,
-                playlistModel.LeafCount,
-                AddedAt = DateTimeOffset.FromUnixTimeSeconds(playlistModel.AddedAt).DateTime,
-                UpdatedAt = DateTimeOffset.FromUnixTimeSeconds(playlistModel.UpdatedAt).DateTime,
-                snapshotId
-            });
-    }
-    
-    
-    public async Task UpsertPlaylistTrackAsync(
-        PlexTrackModel trackModel,
-        string playListId,
-        Guid serverId, 
-        Guid snapshotId,
-        int playlistSortOrder)
-    {
-        if (string.IsNullOrWhiteSpace(trackModel.ParentStudio))
-        {
-            trackModel.ParentStudio = string.Empty;
-        }
-        if (string.IsNullOrWhiteSpace(trackModel.MusicAnalysisVersion))
-        {
-            trackModel.MusicAnalysisVersion = "0";
-        }
-        if (string.IsNullOrWhiteSpace(trackModel.ParentTitle))
-        {
-            trackModel.ParentTitle = string.Empty;
-        }
-        
-        string query = @"
-            INSERT INTO playlists_plex_playlist_track (RatingKey,
-                                                   PlayListId,
-                                                   ServerId,
-                                                   Key,
-                                                   Type,
-                                                   Title,
-                                                   Guid,
-                                                   ParentStudio,
-                                                   LibrarySectionTitle,
-                                                   LibrarySectionId,
-                                                   GrandparentTitle,
-                                                   UserRating,
-                                                   ParentTitle,
-                                                   ParentYear,
-                                                   MusicAnalysisVersion,
-                                                   MediaId,
-                                                   MediaPartId,
-                                                   MediaPartKey,
-                                                   MediaPartDuration,
-                                                   MediaPartFile,
-                                                   MediaPartContainer,
-                                                   IsRemoved,
-                                                   LastViewedAt,
-                                                   LastRatedAt,
-                                                   AddedAt,
-                                                   SnapshotId,
-                                                   playlist_sortorder)
-            VALUES (@RatingKey,
-                    @PlayListId,
-                    @ServerId,
-                    @Key,
-                    @Type,
-                    @Title,
-                    @Guid,
-                    @ParentStudio,
-                    @LibrarySectionTitle,
-                    @LibrarySectionId,
-                    @GrandparentTitle,
-                    @UserRating,
-                    @ParentTitle,
-                    @ParentYear,
-                    @MusicAnalysisVersion,
-                    @MediaId,
-                    @MediaPartId,
-                    @MediaPartKey,
-                    @MediaPartDuration,
-                    @MediaPartFile,
-                    @MediaPartContainer,
-                    @IsRemoved,
-                    @LastViewedAt,
-                    @LastRatedAt,
-                    @AddedAt,
-                    @snapshotId,
-                    @playlistSortOrder)
-            ON CONFLICT (RatingKey, PlayListId, ServerId, SnapShotId)
-            DO UPDATE set
-                Key = EXCLUDED.Key,
-                Type = EXCLUDED.Type,
-                Title = EXCLUDED.Title,
-                Guid = EXCLUDED.Guid,
-                ParentStudio = EXCLUDED.ParentStudio,
-                LibrarySectionTitle = EXCLUDED.LibrarySectionTitle,
-                LibrarySectionId = EXCLUDED.LibrarySectionId,
-                GrandparentTitle = EXCLUDED.GrandparentTitle,
-                UserRating = EXCLUDED.UserRating,
-                ParentTitle = EXCLUDED.ParentTitle,
-                ParentYear = EXCLUDED.ParentYear,
-                MusicAnalysisVersion = EXCLUDED.MusicAnalysisVersion,
-                MediaId = EXCLUDED.MediaId,
-                MediaPartId = EXCLUDED.MediaPartId,
-                MediaPartKey = EXCLUDED.MediaPartKey,
-                MediaPartDuration = EXCLUDED.MediaPartDuration,
-                MediaPartFile = EXCLUDED.MediaPartFile,
-                MediaPartContainer = EXCLUDED.MediaPartContainer,
-                IsRemoved = EXCLUDED.IsRemoved,
-                LastViewedAt = EXCLUDED.LastViewedAt,
-                LastRatedAt = EXCLUDED.LastRatedAt,
-                AddedAt = EXCLUDED.AddedAt";
-
-        await using var conn = new NpgsqlConnection(_connectionString);
-
-        await conn.ExecuteAsync(query, 
-            param: new
-            {
-                serverId,
-                playListId,
-                trackModel.RatingKey,
-                trackModel.Key,
-                trackModel.Type,
-                trackModel.Title,
-                trackModel.Guid,
-                trackModel.ParentStudio,
-                trackModel.LibrarySectionTitle,
-                trackModel.LibrarySectionId,
-                trackModel.GrandparentTitle,
-                trackModel.UserRating,
-                trackModel.ParentTitle,
-                trackModel.ParentYear,
-                MusicAnalysisVersion = int.Parse(trackModel.MusicAnalysisVersion),
-                MediaId = trackModel.Media.First().Id,
-                MediaPartId = trackModel.Media.First().Part.First().Id,
-                MediaPartKey = trackModel.Media.First().Part.First().Key,
-                MediaPartDuration = trackModel.Media.First().Part.First().Duration,
-                MediaPartFile = trackModel.Media.First().Part.First().File,
-                MediaPartContainer = trackModel.Media.First().Part.First().Container,
-                IsRemoved = false,
-                LastViewedAt = DateTimeOffset.FromUnixTimeSeconds(trackModel.LastViewedAt).DateTime,
-                LastRatedAt = DateTimeOffset.FromUnixTimeSeconds(trackModel.LastRatedAt).DateTime,
-                AddedAt = DateTimeOffset.FromUnixTimeSeconds(trackModel.AddedAt).DateTime,
-                snapshotId,
-                playlistSortOrder
-            });
-    }
-    
     public async Task<List<GenericPlaylist>> GetPlaylistsAsync(string serverUrl, Guid snapshotId)
     {
         string query = @"select
@@ -306,12 +72,15 @@ public class PlexRepository
                              track.GrandParentTitle as ArtistName,
                              track.ParentTitle as AlbumName,
                              track.title as Title,
-                             track.UserRating as LikeRating
+                             track.UserRating as LikeRating,
+                             track.playlist_sortorder AS PlaylistSortOrder,
+                             track.playlist_itemid AS PlaylistItemId
                          from playlists_plex_server pps 
                          join playlists_plex_playlist list on list.serverid = pps.id and list.snapshotId = @snapshotId
                          join playlists_plex_playlist_track track on track.serverid = pps.id and track.playlistid = list.ratingkey and track.snapshotId = @snapshotId
                          where pps.serverurl = @serverUrl
-                         and list.ratingkey = @playlistId";
+                         and list.ratingkey = @playlistId
+                         order by track.playlist_sortorder desc";
 
         await using var conn = new NpgsqlConnection(_connectionString);
 
@@ -331,7 +100,9 @@ public class PlexRepository
                              track.GrandParentTitle as ArtistName,
                              track.ParentTitle as AlbumName,
                              track.title as Title,
-                             track.UserRating as LikeRating
+                             track.UserRating as LikeRating,
+                             track.playlist_sortorder AS PlaylistSortOrder,
+                             track.playlist_itemid AS PlaylistItemId
                          from playlists_plex_server pps 
                          join playlists_plex_playlist list on list.serverid = pps.id and list.snapshotId = @snapshotId
                          join playlists_plex_playlist_track track on track.serverid = pps.id and track.playlistid = list.ratingkey and track.snapshotId = @snapshotId
