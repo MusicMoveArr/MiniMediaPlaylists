@@ -14,6 +14,7 @@ public class SyncCommandHandler
     private IProviderService _fromProvider;
     private IProviderService _toProvider;
     private readonly SnapshotRepository _snapshotRepository;
+    private const int MaxMovingPlaylistTracksLoop = 10;
     
     public SyncCommandHandler(string connectionString)
     {
@@ -85,6 +86,12 @@ public class SyncCommandHandler
                         string.Equals(playlist.Name, syncConfiguration.ToPlaylistPrefix + fromPlaylist.Name));
 
                     bool isLikePlaylist = string.Equals(fromPlaylist.Name, syncConfiguration.FromLikePlaylistName);
+                    
+                    if (toPlayList?.CanAddTracks == false && !isLikePlaylist)
+                    {
+                        return;
+                    }
+                    
                     if (toPlayList == null)
                     {
                         //create non-existing playlist on "to" service
@@ -99,6 +106,8 @@ public class SyncCommandHandler
 
                     var task = ctx.AddTask(Markup.Escape($"Processing Playlist '{fromPlaylist.Name}', 0 of {fromTracks.Count} processed"));
                     task.MaxValue = fromTracks.Count;
+
+                    List<UpdatePlaylistTrackOrder> updatePlaylistTrackOrders = new List<UpdatePlaylistTrackOrder>();
                     
                     await ParallelHelper.ForEachAsync(fromTracks, syncConfiguration.TrackThreads, async fromTrack =>
                     {
@@ -110,6 +119,18 @@ public class SyncCommandHandler
                                 
                                 if (toTrack != null)
                                 {
+                                    if (syncConfiguration.SyncTrackOrder)
+                                    {
+                                        updatePlaylistTrackOrders.Add(new UpdatePlaylistTrackOrder
+                                        {
+                                            ToName = syncConfiguration.ToName,
+                                            ToPlaylist = toPlayList,
+                                            FromTrack = fromTrack,
+                                            ToTrack = toTrack,
+                                            NewPlaylistSortOrder = fromTrack.PlaylistSortOrder
+                                        });
+                                    }
+                                    
                                     task.Value++;
                                     task.Description(Markup.Escape(Markup.Escape($"Processing Playlist '{fromPlaylist.Name}', {task.Value} of {fromTracks.Count} processed")));
                                     return;
@@ -138,6 +159,18 @@ public class SyncCommandHandler
 
                             if (foundTrack != null)
                             {
+                                if (syncConfiguration.SyncTrackOrder)
+                                {
+                                    updatePlaylistTrackOrders.Add(new UpdatePlaylistTrackOrder
+                                    {
+                                        ToName = syncConfiguration.ToName,
+                                        ToPlaylist = toPlayList,
+                                        FromTrack = fromTrack,
+                                        ToTrack = foundTrack,
+                                        NewPlaylistSortOrder = fromTrack.PlaylistSortOrder
+                                    });
+                                }
+                                
                                 if (await _toProvider.RateTrackAsync(syncConfiguration.ToName, foundTrack, fromTrack.LikeRating))
                                 {
                                     AnsiConsole.WriteLine(Markup.Escape($"Rated song with rating '{fromTrack.LikeRating}' '{fromTrack.ArtistName} - {fromTrack.AlbumName} - {fromTrack.Title}' {(foundWithDeepSearch ? "found with deep search" : "")}"));
@@ -174,10 +207,107 @@ public class SyncCommandHandler
                         task.Description(Markup.Escape(Markup.Escape($"Processing Playlist '{fromPlaylist.Name}', {task.Value} of {fromTracks.Count} processed")));
                     });
 
+                    if (syncConfiguration.SyncTrackOrder && !isLikePlaylist && toPlayList.CanSortTracks)
+                    {
+                        await FixPlaylistTrackOrderingAsync(updatePlaylistTrackOrders, syncConfiguration, fromTracks, toPlayList);
+                    }
+                    
                     totalProgressTask.Value++;
                     totalProgressTask.Description(Markup.Escape($"Processing Playlists {totalProgressTask.Value} of {fromPlaylists.Count} processed"));
                 });
             });
+    }
+    
+    private async Task FixPlaylistTrackOrderingAsync(
+        List<UpdatePlaylistTrackOrder> updatePlaylistTrackOrders,
+        SyncConfiguration syncConfiguration,
+        List<GenericTrack> fromTracks,
+        GenericPlaylist toPlaylist)
+    {
+        updatePlaylistTrackOrders = updatePlaylistTrackOrders
+            .OrderByDescending(t => t.NewPlaylistSortOrder)
+            .ToList();
+        
+        fromTracks = fromTracks
+            .OrderByDescending(t => t.PlaylistSortOrder)
+            .ToList();
+        
+        if (updatePlaylistTrackOrders.Count != fromTracks.Count)
+        {
+            return;
+        }
+        
+        var tracksToOrder = updatePlaylistTrackOrders
+            .Where(t => t.ToTrack.PlaylistSortOrder != t.NewPlaylistSortOrder)
+            .OrderByDescending(t => t.NewPlaylistSortOrder)
+            .ToList();
+        
+        //dictionary that will remember how many times we moved a track in the playlist
+        //if a track moved >10x for whatever reason it's stuck in a weird loop and we'll quit ordering
+        Dictionary<string, Dictionary<int, int>> orderedTrackCount = new Dictionary<string, Dictionary<int, int>>();
+        
+        while(tracksToOrder.Count > 0)
+        {
+            var track = tracksToOrder.First();
+            
+            var toPlaylistTracks = updatePlaylistTrackOrders
+                .Select(t => t.ToTrack)
+                .ToList();
+            
+            await _toProvider.SetTrackPlaylistOrderAsync(syncConfiguration.ToName, toPlaylist, track.ToTrack, toPlaylistTracks, track.NewPlaylistSortOrder);
+
+            //track moved down in playlist
+            if (track.NewPlaylistSortOrder > track.ToTrack.PlaylistSortOrder)
+            {
+                var moveTracksList = updatePlaylistTrackOrders
+                    .Where(t => t.ToTrack.Id != track.ToTrack.Id)
+                    .Where(t => t.ToTrack.PlaylistSortOrder <= track.NewPlaylistSortOrder)
+                    .Where(t => t.ToTrack.PlaylistSortOrder >= track.ToTrack.PlaylistSortOrder)
+                    .ToList();
+                
+                foreach (var movedTrack in moveTracksList)
+                {
+                    movedTrack.ToTrack.PlaylistSortOrder--;
+                }
+            }
+            else //track moved up in playlist
+            {
+                var moveTracksList = updatePlaylistTrackOrders
+                    .Where(t => t.ToTrack.Id != track.ToTrack.Id)
+                    .Where(t => t.ToTrack.PlaylistSortOrder >= track.NewPlaylistSortOrder)
+                    .Where(t => t.ToTrack.PlaylistSortOrder <= track.ToTrack.PlaylistSortOrder)
+                    .ToList();
+
+                foreach (var movedTrack in moveTracksList.OrderBy(x => x.ToTrack.PlaylistSortOrder))
+                {
+                    movedTrack.ToTrack.PlaylistSortOrder++;
+                }
+            }
+            track.ToTrack.PlaylistSortOrder = track.NewPlaylistSortOrder;
+            
+            Dictionary<int, int> orderingHistory = new Dictionary<int, int>();
+            if (!orderedTrackCount.TryGetValue(track.ToTrack.Id, out orderingHistory))
+            {
+                orderingHistory = new Dictionary<int, int>();
+                orderedTrackCount.Add(track.ToTrack.Id, orderingHistory);
+            }
+
+            if (!orderingHistory.ContainsKey(track.NewPlaylistSortOrder))
+            {
+                orderingHistory.Add(track.NewPlaylistSortOrder, 0);
+            }
+            orderingHistory[track.NewPlaylistSortOrder]++;
+
+            if (orderingHistory[track.NewPlaylistSortOrder] >= MaxMovingPlaylistTracksLoop)
+            {
+                break;
+            }
+            
+            tracksToOrder = updatePlaylistTrackOrders
+                .Where(t => t.ToTrack.PlaylistSortOrder != t.NewPlaylistSortOrder)
+                .OrderByDescending(t => t.NewPlaylistSortOrder)
+                .ToList();
+        }
     }
 
     private GenericTrack? FindTrack(

@@ -51,15 +51,9 @@ public class JellyfinService : IProviderService
             .SearchTracks(serverUrl, dbAuthInfo.JellyfinUserId, dbAuthInfo.AccessToken, title);
 
 
-        return tracks.Items.Select(track => new GenericTrack
-        {
-            Id = track.Id,
-            AlbumName = track.Album,
-            ArtistName = track.AlbumArtist,
-            LikeRating = 0,
-            Title = track.Name,
-            Uri = string.Empty
-        }).ToList();
+        return tracks.Items
+            .Select(track => new GenericTrack(track.Id, track.Name, track.AlbumArtist, track.Album))
+            .ToList();
     }
 
     public async Task<List<GenericTrack>> DeepSearchTrackAsync(string serverUrl, string artist, string album, string title)
@@ -84,6 +78,11 @@ public class JellyfinService : IProviderService
     }
 
     public async Task<bool> RateTrackAsync(string serverUrl, GenericTrack track, float rating)
+    {
+        return false;
+    }
+
+    public async Task<bool> SetTrackPlaylistOrderAsync(string serverUrl, GenericPlaylist playlist, GenericTrack track, List<GenericTrack> playlistTracks, int newPlaylistOrder)
     {
         return false;
     }

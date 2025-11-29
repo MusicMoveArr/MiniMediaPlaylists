@@ -14,4 +14,5 @@ public interface IProviderService
     Task<bool> AddTrackToPlaylistAsync(string serverUrl, string playlistId, GenericTrack track);
     Task<bool> LikeTrackAsync(string serverUrl, GenericTrack track, float rating);
     Task<bool> RateTrackAsync(string serverUrl, GenericTrack track, float rating);
+    Task<bool> SetTrackPlaylistOrderAsync(string serverUrl, GenericPlaylist playlist, GenericTrack track, List<GenericTrack> playlistTracks, int newPlaylistOrder);
 }

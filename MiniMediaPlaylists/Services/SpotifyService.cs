@@ -59,15 +59,7 @@ public class SpotifyService : IProviderService
         var searchResponse = await _spotifyClient.Search.Item(request);
         var tracks = searchResponse.Tracks.Items
             .Where(track => track.Type == ItemType.Track)
-            .Select(track => 
-                new GenericTrack
-            {
-                Id = track.Id,
-                AlbumName = track.Album.Name,
-                ArtistName = track.Artists.FirstOrDefault().Name,
-                Title = track.Name,
-                Uri = track.Uri
-            })
+            .Select(track => new GenericTrack(track.Id, track.Name, track.Artists.FirstOrDefault().Name, track.Album.Name, track.Uri))
             .Where(track => !string.IsNullOrWhiteSpace(track.Id))
             .Where(track => !string.IsNullOrWhiteSpace(track.AlbumName))
             .Where(track => !string.IsNullOrWhiteSpace(track.ArtistName))
@@ -118,5 +110,10 @@ public class SpotifyService : IProviderService
             spotifyOwnerModel.AuthSecretId, spotifyOwnerModel.AuthRefreshToken);
         var newToken = await new OAuthClient().RequestToken(refreshRequest);
         return new SpotifyClient(newToken.AccessToken);
+    }
+    
+    public async Task<bool> SetTrackPlaylistOrderAsync(string serverUrl, GenericPlaylist playlist, GenericTrack track, List<GenericTrack> playlistTracks, int newPlaylistOrder)
+    {
+        return false;
     }
 }

@@ -216,7 +216,9 @@ public class TidalRepository
     {
         string query = @"select
                              list.id,
-                             list.Name
+                             list.Name,
+                             true as CanAddTracks,
+                             true as CanSortTracks
                          from playlists_tidal_owner ppo
                          join playlists_tidal_playlist list on list.ownerid = ppo.id and list.snapshotId = @snapshotId
                          where ppo.ownerid = @ownerId";

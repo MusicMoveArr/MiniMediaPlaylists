@@ -102,15 +102,12 @@ public class TidalService : IProviderService
 
                     foreach (var trackMatch in trackMatches)
                     {
-                        foundTracks.Add(new GenericTrack
-                        {
-                            Id = trackMatch.Id,
-                            AlbumName = albumTracks.Data.Attributes.Title,
-                            ArtistName = artistNames.FirstOrDefault(),
-                            Title = trackMatch.Attributes.Title,
-                            LikeRating = 0,
-                            Uri = string.Empty
-                        });
+                        foundTracks.Add(new GenericTrack(
+                            trackMatch.Id, 
+                            trackMatch.Attributes.Title,
+                            artistNames.FirstOrDefault(),
+                            albumTracks.Data.Attributes.Title
+                            ));
                     }
                 }
             }
@@ -255,5 +252,9 @@ public class TidalService : IProviderService
             }
         }
         return tracks;
+    }
+    public async Task<bool> SetTrackPlaylistOrderAsync(string serverUrl, GenericPlaylist playlist, GenericTrack track, List<GenericTrack> playlistTracks, int newPlaylistOrder)
+    {
+        return false;
     }
 }

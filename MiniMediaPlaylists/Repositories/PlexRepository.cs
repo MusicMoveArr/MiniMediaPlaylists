@@ -50,7 +50,9 @@ public class PlexRepository
     {
         string query = @"select
 	                         list.ratingkey as Id,
-	                         list.Title as Name
+	                         list.Title as Name,
+	                         CASE WHEN list.smart = true THEN false ELSE true end as CanAddTracks,
+	                         CASE WHEN list.smart = true THEN false ELSE true end as CanSortTracks
                          from playlists_plex_server pps 
                          join playlists_plex_playlist list on list.serverid = pps.id and list.snapshotId = @snapshotId
                          where pps.serverurl = @serverUrl";
@@ -80,7 +82,7 @@ public class PlexRepository
                          join playlists_plex_playlist_track track on track.serverid = pps.id and track.playlistid = list.ratingkey and track.snapshotId = @snapshotId
                          where pps.serverurl = @serverUrl
                          and list.ratingkey = @playlistId
-                         order by track.playlist_sortorder desc";
+                         order by track.playlist_sortorder asc";
 
         await using var conn = new NpgsqlConnection(_connectionString);
 

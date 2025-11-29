@@ -221,7 +221,9 @@ public class JellyfinRepository
     {
         string query = @"select
                              list.id,
-                             list.Name
+                             list.Name,
+                             true as CanAddTracks,
+                             true as CanSortTracks
                          from playlists_jellyfin_owner ppo
                          join playlists_jellyfin_playlist list on list.ownerid = ppo.id 
                          where ppo.username = @username

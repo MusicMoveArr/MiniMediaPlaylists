@@ -39,4 +39,5 @@ public class SyncConfiguration
     public required bool DeepSearchThroughArtist { get; init; }
     public required int PlaylistThreads { get; init; }
     public required int TrackThreads { get; init; }
+    public required bool SyncTrackOrder { get; init; }
 }

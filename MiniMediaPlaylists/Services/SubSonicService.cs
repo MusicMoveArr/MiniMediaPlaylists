@@ -3,6 +3,7 @@ using MiniMediaPlaylists.Helpers;
 using MiniMediaPlaylists.Interfaces;
 using MiniMediaPlaylists.Models;
 using MiniMediaPlaylists.Repositories;
+using Spectre.Console;
 using SubSonicMedia;
 using SubSonicMedia.Models;
 
@@ -10,10 +11,13 @@ namespace MiniMediaPlaylists.Services;
 
 public class SubSonicService : IProviderService
 {
+    private static NavidromeService navidrome;
     private readonly SubSonicRepository _subSonicRepository;
     private readonly SyncConfiguration _syncConfiguration;
     private readonly string _username;
     private readonly string _password;
+    private IProviderService _providerServiceImplementation;
+    private bool isNotNavidrome = false;
 
     public SubSonicService(string connectionString, string username, string password, SyncConfiguration syncConfiguration)
     {
@@ -67,13 +71,9 @@ public class SubSonicService : IProviderService
         string searchQuery = $"{artist} {title}";
         var response = await client.Search.Search3Async(searchQuery, songCount: 200);
 
-        return response.SearchResult.Songs.Select(track => new GenericTrack
-        {
-            Id = track.Id,
-            AlbumName = track.Album,
-            ArtistName = track.Artist,
-            Title = track.Title,
-        }).ToList();
+        return response.SearchResult.Songs
+            .Select(track => new GenericTrack(track.Id, track.Title, track.Artist, track.Album))
+            .ToList();
     }
 
     public async Task<List<GenericTrack>> DeepSearchTrackAsync(string serverUrl, string artist, string album, string title)
@@ -115,14 +115,7 @@ public class SubSonicService : IProviderService
                     var tracks = albumInfo.Album.Song
                         .Where(track => Fuzz.PartialRatio(track.Title.ToLower(), title.ToLower()) >= _syncConfiguration.MatchPercentage)
                         .Where(track => FuzzyHelper.ExactNumberMatch(track.Title, title))
-                        .Select(track => new GenericTrack
-                        {
-                            Id = track.Id,
-                            Title = track.Title,
-                            AlbumName = track.Album,
-                            ArtistName = track.Artist,
-                            LikeRating = track.UserRating ?? 0
-                        })
+                        .Select(track => new GenericTrack(track.Id, track.Title, track.Artist, track.Album, 0, track.UserRating ?? 0))
                         .ToList();
                     trackList.AddRange(tracks);
                 }
@@ -149,14 +142,7 @@ public class SubSonicService : IProviderService
                 var tracks = albumInfo.Album.Song
                     .Where(track => Fuzz.PartialRatio(track.Title.ToLower(), title.ToLower()) >= _syncConfiguration.MatchPercentage)
                     .Where(track => FuzzyHelper.ExactNumberMatch(track.Title, title))
-                    .Select(track => new GenericTrack
-                    {
-                        Id = track.Id,
-                        Title = track.Title,
-                        AlbumName = track.Album,
-                        ArtistName = track.Artist,
-                        LikeRating = track.UserRating ?? 0
-                    })
+                    .Select(track => new GenericTrack(track.Id, track.Title, track.Artist, track.Album, 0, track.UserRating ?? 0))
                     .ToList();
                 trackList.AddRange(tracks);
             }
@@ -181,6 +167,7 @@ public class SubSonicService : IProviderService
         using var client = new SubsonicClient(connection);
 
         await client.Playlists.UpdatePlaylistAsync(playlistId, songIdsToAdd: [track.Id]);
+        
 
         return true;
     }
@@ -193,7 +180,7 @@ public class SubSonicService : IProviderService
             password: _password
         );
         using var client = new SubsonicClient(connection);
-
+        
         var starResponse = await client.Annotation.StarAsync(track.Id);
         
         return starResponse.IsSuccess;
@@ -209,15 +196,47 @@ public class SubSonicService : IProviderService
                 password: _password
             );
             using var client = new SubsonicClient(connection);
+            
             rating = _syncConfiguration.FromService switch
             {
                 SyncConfiguration.ServicePlex => rating / 2F,
                 SyncConfiguration.ServiceSubsonic => rating,
                 _ => rating
             };
-            return (await client.Annotation.SetRatingAsync(track.Id, (int)rating)).IsSuccess;
+            
+            await client.Annotation.SetRatingAsync(track.Id, (int)rating);
         }
         
         return false;
+    }
+
+    public async Task<bool> SetTrackPlaylistOrderAsync(string serverUrl, 
+        GenericPlaylist playlist, 
+        GenericTrack track, 
+        List<GenericTrack> playlistTracks, 
+        int newPlaylistOrder)
+    {
+        if (isNotNavidrome)
+        {
+            return false;
+        }
+        
+        try
+        {
+            if (navidrome?.LoginResponse == null)
+            {
+                navidrome = new NavidromeService(serverUrl, _username, _password);
+                await navidrome.LoginAsync();
+                isNotNavidrome = navidrome.LoginResponse == null;
+            }
+        }
+        catch (Exception e)
+        {
+            isNotNavidrome = true;
+            return false;
+        }
+        
+        await navidrome.SetPlaylistTrackOrderAsync(playlist.Id, track.PlaylistSortOrder, newPlaylistOrder);
+        return true;
     }
 }

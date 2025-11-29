@@ -48,7 +48,9 @@ public class SubSonicRepository
     {
         string query = @"select
 	                         list.Id,
-	                         list.Name
+	                         list.Name,
+	                         true as CanAddTracks,
+	                         true as CanSortTracks
                          from playlists_subsonic_server pps 
                          join playlists_subsonic_playlist list on list.serverid = pps.id and list.snapshotId = @snapshotId
                          where pps.serverurl = @serverUrl";
@@ -77,7 +79,7 @@ public class SubSonicRepository
                          join playlists_subsonic_playlist_track track on track.serverid = pps.id and track.playlistid = list.id and track.snapshotId = @snapshotId
                          where pps.serverurl = @serverUrl
                          and list.id = @playlistId
-                         order by track.playlist_sortorder desc";
+                         order by track.playlist_sortorder asc";
 
         await using var conn = new NpgsqlConnection(_connectionString);
 

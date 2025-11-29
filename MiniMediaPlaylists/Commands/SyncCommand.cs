@@ -184,6 +184,12 @@ public class SyncPlexCommand : ICommand
         IsRequired = false,
         EnvironmentVariable = "SYNC_TRACK_THREADS")]
     public int TrackThreads { get; init; } = 1;
+    
+    [CommandOption("sync-track-order",
+        Description = "Synchronize the track order in playlists.",
+        IsRequired = false,
+        EnvironmentVariable = "SYNC_TRACK_ORDER")]
+    public bool SyncTrackOrder { get; init; } = false;
 
     public async ValueTask ExecuteAsync(IConsole console)
     {
@@ -219,7 +225,8 @@ public class SyncPlexCommand : ICommand
             ForceAddTrack = ForceAddTrack,
             DeepSearchThroughArtist = DeepSearchThroughArtist,
             PlaylistThreads = PlaylistThreads,
-            TrackThreads = TrackThreads
+            TrackThreads = TrackThreads,
+            SyncTrackOrder = SyncTrackOrder
         };
 
         await handler.SyncPlaylists(syncConfig);

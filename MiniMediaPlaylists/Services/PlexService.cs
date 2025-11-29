@@ -2,6 +2,7 @@ using FuzzySharp;
 using MiniMediaPlaylists.Interfaces;
 using MiniMediaPlaylists.Models;
 using MiniMediaPlaylists.Repositories;
+using Spectre.Console;
 
 namespace MiniMediaPlaylists.Services;
 
@@ -64,25 +65,17 @@ public class PlexService : IProviderService
             
             foundTracks.AddRange(albumTracks.MediaContainer?.Metadata?
                 .Where(track => track.Type == "track")
-                .Select(track => new GenericTrack
-            {
-                Id = track.RatingKey,
-                AlbumName = track.ParentTitle,
-                ArtistName = track.GrandparentTitle,
-                Title = track.Title
-            }));
+                .Select(track => new GenericTrack(track.RatingKey, track.Title, track.GrandparentTitle, track.ParentTitle)));
         }
         
         
         foundTracks.AddRange(response?.MediaContainer?.SearchResult
             ?.Where(track => track.Metadata.Type == "track")
-            ?.Select(track => new GenericTrack
-            {
-                Id = track.Metadata.RatingKey,
-                AlbumName = track.Metadata.ParentTitle,
-                ArtistName = track.Metadata.GrandparentTitle,
-                Title = track.Metadata.Title
-            }) ?? []);
+            ?.Select(track => new GenericTrack(
+                track.Metadata.RatingKey, 
+                track.Metadata.Title, 
+                track.Metadata.GrandparentTitle, 
+                track.Metadata.ParentTitle)) ?? []);
         
         return foundTracks
             .Where(track => !string.IsNullOrWhiteSpace(track.Id))
@@ -123,13 +116,7 @@ public class PlexService : IProviderService
                 
                 foundTracks.AddRange(tracks.MediaContainer?.Metadata?
                     .Where(track => track.Type == "track")
-                    .Select(track => new GenericTrack
-                    {
-                        Id = track.RatingKey,
-                        AlbumName = track.ParentTitle,
-                        ArtistName = track.GrandparentTitle,
-                        Title = track.Title
-                    })
+                    .Select(track => new GenericTrack(track.RatingKey, track.Title, track.GrandparentTitle, track.ParentTitle))
                     .ToList());
             }
             
@@ -153,13 +140,7 @@ public class PlexService : IProviderService
                 
                     foundTracks.AddRange(tracks.MediaContainer?.Metadata?
                         .Where(track => track.Type == "track")
-                        .Select(track => new GenericTrack
-                        {
-                            Id = track.RatingKey,
-                            AlbumName = track.ParentTitle,
-                            ArtistName = track.GrandparentTitle,
-                            Title = track.Title
-                        })
+                        .Select(track => new GenericTrack(track.RatingKey, track.Title, track.GrandparentTitle, track.ParentTitle))
                         .ToList());
                 }
             }
@@ -217,5 +198,35 @@ public class PlexService : IProviderService
         await _plexApiService.LikeTrackAsync(serverUrl, _syncConfiguration.ToPlexToken, track.Id, (int)rating);
         
         return true;
+    }
+    public async Task<bool> SetTrackPlaylistOrderAsync(string serverUrl, GenericPlaylist playlist, GenericTrack track, List<GenericTrack> playlistTracks, int newPlaylistOrder)
+    {
+        try
+        {
+            if (newPlaylistOrder == 1)
+            {
+                var responsez = await _plexApiService.MoveTrackInPlaylistAsync(
+                    serverUrl, 
+                    _syncConfiguration.ToPlexToken, 
+                    playlist.Id, 
+                    track.PlaylistItemId, 
+                    string.Empty);
+                return responsez?.MediaContainer.Metadata.Count > 0;
+            }
+
+            string? afterTrackRatingKey = playlistTracks.FirstOrDefault(t => t.PlaylistSortOrder == newPlaylistOrder)?.PlaylistItemId;
+            
+            if (string.IsNullOrWhiteSpace(afterTrackRatingKey))
+            {
+                return false;
+            }
+            var response = await _plexApiService.MoveTrackInPlaylistAsync(serverUrl, _syncConfiguration.ToPlexToken, playlist.Id, track.PlaylistItemId, afterTrackRatingKey);
+            return response?.MediaContainer.Metadata.Count > 0;
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e.Message);
+        }
+        return false;
     }
 }

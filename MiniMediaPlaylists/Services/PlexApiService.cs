@@ -134,6 +134,35 @@ public class PlexApiService
             await client.PutAsync(request);
         });
     }
+    public async Task<PlexMediaContainerResponse<PlexPlaylistModel>?> MoveTrackInPlaylistAsync(
+        string serverUrl, 
+        string token, 
+        string playlistRatingKey,
+        string trackPlaylistItemId,
+        string afterTrackPlaylistItemId)
+    {
+        string url = $"{serverUrl}/playlists/{playlistRatingKey}/items/{trackPlaylistItemId}/move";
+
+        if (!string.IsNullOrWhiteSpace(afterTrackPlaylistItemId))
+        {
+            //no "after" track means this track will be at the top of the playlist
+            url += $"?after={afterTrackPlaylistItemId}";
+            url += $"&X-Plex-Token={token}";
+        }
+        else
+        {
+            url += $"?X-Plex-Token={token}";
+        }
+        
+        using RestClient client = new RestClient(url);
+        AsyncRetryPolicy retryPolicy = GetRetryPolicy();
+        
+        return await retryPolicy.ExecuteAsync(async () =>
+        {
+            RestRequest request = new RestRequest();
+            return await client.PutAsync<PlexMediaContainerResponse<PlexPlaylistModel>>(request);
+        });
+    }
     
     private AsyncRetryPolicy GetRetryPolicy()
     {

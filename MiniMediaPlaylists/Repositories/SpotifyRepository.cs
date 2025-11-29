@@ -226,7 +226,9 @@ public class SpotifyRepository
     {
         string query = @"select
                              list.id,
-                             list.Name
+                             list.Name,
+                             true as CanAddTracks,
+                             true as CanSortTracks
                          from playlists_spotify_owner ppo
                          join playlists_spotify_playlist list on list.ownerid = ppo.id and list.snapshotId = @snapshotId
                          where ppo.ownerid = @ownerId";
@@ -247,7 +249,8 @@ public class SpotifyRepository
                              track.id as Id,
                              track.ArtistName as ArtistName,
                              track.AlbumName as AlbumName,
-                             track.Name as Title
+                             track.Name as Title,
+                             track.playlist_sortorder AS PlaylistSortOrder
                          from playlists_spotify_owner ppo
                          join playlists_spotify_playlist list on list.ownerid = ppo.id and list.snapshotId = @snapshotId
                          join playlists_spotify_playlist_track track on track.ownerid = ppo.id and track.playlistid = list.id and track.snapshotId = @snapshotId
