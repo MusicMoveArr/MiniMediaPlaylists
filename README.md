@@ -36,6 +36,19 @@ Loving the work I do? buy me a coffee https://buymeacoffee.com/musicmovearr
 5. PullTidal - Pull all your Tidal playlists
 6. PullJellyfin  - Pull all your Jellyfin playlists
 
+# Feature list per service
+| Service | Sync Playlists | Sync Favorite tracks | Create Playlist | Sync Track Order | Rate Tracks | Deep Search Tracks |
+| --- | --- | --- | --- | --- | --- | --- |
+| Jellyfin | Yes | Yes | Yes | *TBI | *TBI | *TBI |
+| Plex | Yes | Yes | Yes | Yes | Yes | Yes |
+| Spotify | Yes | Yes | Yes | *TBI | Can't | *TBI |
+| Subsonic | Yes | Yes | Yes | Yes | Navidrome only | Yes |
+| Tidal | Yes | Yes | Yes | *TBI | Can't | *TBI |
+
+*TBI, To Be Implemented Yet
+
+*Can't, The service does not support X feature
+
 # Docker-Compose example
 This example will pull the plex playlists every 6 hours and playlists that have over 5000 tracks won't get pulled
 ```
