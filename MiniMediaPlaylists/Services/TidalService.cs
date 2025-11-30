@@ -116,7 +116,7 @@ public class TidalService : IProviderService
         return foundTracks;
     }
 
-    public async Task<List<GenericTrack>> DeepSearchTrackAsync(string serverUrl, string artist, string album, string title)
+    public async Task<List<GenericTrack>> DeepSearchTrackAsync(string serverUrl, string artist, string album, string title, Guid snapshotId)
     {
         return new List<GenericTrack>();
     }

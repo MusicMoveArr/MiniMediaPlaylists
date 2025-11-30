@@ -150,13 +150,13 @@ public class PlexRepository
         return updatedModel.AddedAt == DateTimeOffset.FromUnixTimeSeconds(addedAt).Date && 
                updatedModel.UpdatedAt == DateTimeOffset.FromUnixTimeSeconds(updatedAt).Date;
     }
-    public async Task<List<int>> GetLibrarySectionIdsAsync(string serverUrl)
+    public async Task<List<int>> GetLibrarySectionIdsAsync(string serverUrl, Guid snapshotId)
     {
         string query = @"select distinct
                              track.librarysectionid
                          from playlists_plex_server pps 
-                         join playlists_plex_playlist list on list.serverid = pps.id
-                         join playlists_plex_playlist_track track on track.serverid = pps.id and track.playlistid = list.ratingkey
+                         join playlists_plex_playlist list on list.serverid = pps.id and list.snapshotId = @snapshotId
+                         join playlists_plex_playlist_track track on track.serverid = pps.id and track.playlistid = list.ratingkey and track.snapshotId = @snapshotId
                          where pps.serverurl = @serverUrl";
 
         await using var conn = new NpgsqlConnection(_connectionString);
@@ -164,7 +164,8 @@ public class PlexRepository
         return (await conn.QueryAsync<int>(query, 
             param: new
             {
-                serverUrl
+                serverUrl,
+                snapshotId
             })).ToList();
     }
 }

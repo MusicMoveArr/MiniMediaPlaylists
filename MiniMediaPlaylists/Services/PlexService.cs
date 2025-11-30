@@ -86,13 +86,13 @@ public class PlexService : IProviderService
             .ToList();
     }
 
-    public async Task<List<GenericTrack>> DeepSearchTrackAsync(string serverUrl, string artist, string album, string title)
+    public async Task<List<GenericTrack>> DeepSearchTrackAsync(string serverUrl, string artist, string album, string title, Guid snapshotId)
     {
         string serverMachineIdentifier = await GetMachineIdentifierAsync(serverUrl);
         var response = await _plexApiService.SearchTracksAsync(serverUrl, _syncConfiguration.ToPlexToken, artist);
         var foundTracks = new List<GenericTrack>();
 
-        List<int> librarySectionIds = await _plexRepository.GetLibrarySectionIdsAsync(serverUrl);
+        List<int> librarySectionIds = await _plexRepository.GetLibrarySectionIdsAsync(serverUrl, snapshotId);
 
         foreach (var searchResult in response.MediaContainer.SearchResult
                      .Where(a => a.Metadata.Type == "artist")

@@ -152,7 +152,8 @@ public class SyncCommandHandler
                                     syncConfiguration.ToName,
                                     fromTrack.ArtistName,
                                     fromTrack.AlbumName,
-                                    fromTrack.Title);
+                                    fromTrack.Title,
+                                    toSnapshotId);
                                 foundTrack = FindTrack(searchResults, syncConfiguration, fromTrack);
                                 foundWithDeepSearch = foundTrack != null;
                             }
