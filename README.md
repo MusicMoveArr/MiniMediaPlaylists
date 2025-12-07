@@ -42,7 +42,7 @@ Loving the work I do? buy me a coffee https://buymeacoffee.com/musicmovearr
 | Jellyfin | Yes | Yes | Yes | *TBI | *TBI | *TBI |
 | Plex | Yes | Yes | Yes | Yes | Yes | Yes |
 | Spotify | Yes | Yes | Yes | *TBI | Can't | *TBI |
-| Subsonic | Yes | Yes | Yes | Yes | Navidrome only | Yes |
+| Subsonic | Yes | Yes | Yes | Navidrome only | Yes | Yes |
 | Tidal | Yes | Yes | Yes | *TBI | Can't | *TBI |
 
 *TBI, To Be Implemented Yet
