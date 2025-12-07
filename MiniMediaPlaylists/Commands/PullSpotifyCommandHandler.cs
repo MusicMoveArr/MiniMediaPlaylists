@@ -124,6 +124,11 @@ public class PullSpotifyCommandHandler
                     {
                         if (item.Track is FullTrack track)
                         {
+                            if (string.IsNullOrWhiteSpace(track.Id))
+                            {
+                                continue;
+                            }
+                            
                             int artistIndex = 0;
                             foreach (var artist in track.Artists)
                             {
@@ -170,6 +175,11 @@ public class PullSpotifyCommandHandler
                         {
                             if (item.Track is FullTrack track)
                             {
+                                if (string.IsNullOrWhiteSpace(track.Id))
+                                {
+                                    continue;
+                                }
+                                
                                 int artistIndex = 0;
                                 foreach (var artist in track.Artists)
                                 {
