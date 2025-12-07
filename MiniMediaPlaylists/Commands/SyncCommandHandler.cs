@@ -115,7 +115,12 @@ public class SyncCommandHandler
                         {
                             if (!syncConfiguration.ForceAddTrack)
                             {
-                                var toTrack = FindTrack(toTracks, syncConfiguration, fromTrack);
+                                var toTrack = FindTrack(toTracks, syncConfiguration, fromTrack, false);
+
+                                if (toTrack == null && syncConfiguration.SecondSearchWithoutAlbum)
+                                {
+                                    toTrack = FindTrack(toTracks, syncConfiguration, fromTrack, true);
+                                }
                                 
                                 if (toTrack != null)
                                 {
@@ -143,7 +148,7 @@ public class SyncCommandHandler
                                 fromTrack.AlbumName,
                                 fromTrack.Title);
 
-                            var foundTrack = FindTrack(searchResults, syncConfiguration, fromTrack);
+                            var foundTrack = FindTrack(searchResults, syncConfiguration, fromTrack, false);
 
                             bool foundWithDeepSearch = false;
                             if (foundTrack == null && syncConfiguration.DeepSearchThroughArtist)
@@ -154,8 +159,32 @@ public class SyncCommandHandler
                                     fromTrack.AlbumName,
                                     fromTrack.Title,
                                     toSnapshotId);
-                                foundTrack = FindTrack(searchResults, syncConfiguration, fromTrack);
+                                foundTrack = FindTrack(searchResults, syncConfiguration, fromTrack, false);
                                 foundWithDeepSearch = foundTrack != null;
+                            }
+
+                            if (foundTrack == null && syncConfiguration.SecondSearchWithoutAlbum)
+                            {
+                                searchResults = await _toProvider.SearchTrackAsync(
+                                    syncConfiguration.ToName,
+                                    fromTrack.ArtistName,
+                                    string.Empty,
+                                    fromTrack.Title);
+
+                                foundTrack = FindTrack(searchResults, syncConfiguration, fromTrack, true);
+
+                                foundWithDeepSearch = false;
+                                if (foundTrack == null && syncConfiguration.DeepSearchThroughArtist)
+                                {
+                                    searchResults = await _toProvider.DeepSearchTrackAsync(
+                                        syncConfiguration.ToName,
+                                        fromTrack.ArtistName,
+                                        string.Empty,
+                                        fromTrack.Title,
+                                        toSnapshotId);
+                                    foundTrack = FindTrack(searchResults, syncConfiguration, fromTrack, true);
+                                    foundWithDeepSearch = foundTrack != null;
+                                }
                             }
 
                             if (foundTrack != null)
@@ -174,29 +203,29 @@ public class SyncCommandHandler
                                 
                                 if (await _toProvider.RateTrackAsync(syncConfiguration.ToName, foundTrack, fromTrack.LikeRating))
                                 {
-                                    AnsiConsole.WriteLine(Markup.Escape($"Rated song with rating '{fromTrack.LikeRating}' '{fromTrack.ArtistName} - {fromTrack.AlbumName} - {fromTrack.Title}' {(foundWithDeepSearch ? "found with deep search" : "")}"));
+                                    AnsiConsole.WriteLine(Markup.Escape($"Rated song with rating '{fromTrack.LikeRating}' '{foundTrack.ArtistName} - {foundTrack.AlbumName} - {foundTrack.Title}' {(foundWithDeepSearch ? "found with deep search" : "")}"));
                                 }
 
                                 if (isLikePlaylist)
                                 {
                                     if (await _toProvider.LikeTrackAsync(syncConfiguration.ToName, foundTrack, fromTrack.LikeRating))
                                     {
-                                        AnsiConsole.WriteLine(Markup.Escape($"Liked song with rating '{fromTrack.LikeRating}' '{fromTrack.ArtistName} - {fromTrack.AlbumName} - {fromTrack.Title}' {(foundWithDeepSearch ? "found with deep search" : "")}"));
+                                        AnsiConsole.WriteLine(Markup.Escape($"Liked song with rating '{fromTrack.LikeRating}' '{foundTrack.ArtistName} - {foundTrack.AlbumName} - {foundTrack.Title}' {(foundWithDeepSearch ? "found with deep search" : "")}"));
                                     }
                                     else
                                     {
-                                        AnsiConsole.WriteLine(Markup.Escape($"Failed to like the song, '{fromTrack.ArtistName} - {fromTrack.AlbumName} - {fromTrack.Title}'"));
+                                        AnsiConsole.WriteLine(Markup.Escape($"Failed to like the song, '{foundTrack.ArtistName} - {foundTrack.AlbumName} - {foundTrack.Title}'"));
                                     }
                                 }
                                 else
                                 {
                                     await _toProvider.AddTrackToPlaylistAsync(syncConfiguration.ToName, toPlayList.Id, foundTrack);
-                                    AnsiConsole.WriteLine(Markup.Escape($"Added song to playlist '{fromTrack.ArtistName} - {fromTrack.AlbumName} - {fromTrack.Title}' {(foundWithDeepSearch ? "found with deep search" : "")}"));
+                                    AnsiConsole.WriteLine(Markup.Escape($"Added song to playlist '{foundTrack.ArtistName} - {foundTrack.AlbumName} - {foundTrack.Title}' {(foundWithDeepSearch ? "found with deep search" : "")}"));
                                 }
                             }
                             else
                             {
-                                AnsiConsole.WriteLine(Markup.Escape($"Track not found for '{syncConfiguration.ToService}' '{fromTrack.ArtistName} - {fromTrack.AlbumName} - {fromTrack.Title}'"));
+                                AnsiConsole.WriteLine(Markup.Escape($"Track not found for '{syncConfiguration.ToService}',      {fromTrack.ArtistName} <!-!> {fromTrack.AlbumName} <!-!> {fromTrack.Title}"));
                             }
                         }
                         catch (Exception e)
@@ -314,14 +343,15 @@ public class SyncCommandHandler
     private GenericTrack? FindTrack(
         List<GenericTrack> searchResults,
         SyncConfiguration syncConfiguration,
-        GenericTrack fromTrack)
+        GenericTrack fromTrack,
+        bool ignoreAlbum)
     {
         var foundTracks = searchResults
             .Select(track => new
             {
                 Track = track,
                 ArtistMatch = Fuzz.PartialRatio(track.ArtistName.ToLower(), fromTrack.ArtistName.ToLower()),
-                AlbumMatch = Fuzz.Ratio(track.AlbumName.ToLower(), fromTrack.AlbumName.ToLower()),
+                AlbumMatch = ignoreAlbum ? 100 : Fuzz.Ratio(track.AlbumName.ToLower(), fromTrack.AlbumName.ToLower()),
                 TitleMatch = Fuzz.Ratio(track.Title.ToLower(), fromTrack.Title.ToLower())
             })
             .OrderByDescending(track => track.ArtistMatch)
@@ -334,8 +364,11 @@ public class SyncCommandHandler
             .Where(track => track.AlbumMatch >= syncConfiguration.MatchPercentage)
             .Where(track => track.TitleMatch >= syncConfiguration.MatchPercentage)
             .Where(track => FuzzyHelper.ExactNumberMatch(track.Track.ArtistName, fromTrack.ArtistName))
-            .Where(track => FuzzyHelper.ExactNumberMatch(track.Track.AlbumName, fromTrack.AlbumName))
+            .Where(track => ignoreAlbum || FuzzyHelper.ExactNumberMatch(track.Track.AlbumName, fromTrack.AlbumName))
             .Where(track => FuzzyHelper.ExactNumberMatch(track.Track.Title, fromTrack.Title))
+            .OrderByDescending(track => track.ArtistMatch)
+            .ThenByDescending(track => track.AlbumMatch)
+            .ThenByDescending(track => track.TitleMatch)
             .Select(track => track.Track)
             .FirstOrDefault();
 

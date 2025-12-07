@@ -190,6 +190,12 @@ public class SyncPlexCommand : ICommand
         IsRequired = false,
         EnvironmentVariable = "SYNC_TRACK_ORDER")]
     public bool SyncTrackOrder { get; init; } = false;
+    
+    [CommandOption("second-search-without-album",
+        Description = "When searching with album cannot find all the tracks, try again without album name.",
+        IsRequired = false,
+        EnvironmentVariable = "SYNC_SECOND_SEARCH_WITHOUT_ALBUM")]
+    public bool SecondSearchWithoutAlbum { get; init; } = false;
 
     public async ValueTask ExecuteAsync(IConsole console)
     {
@@ -226,7 +232,8 @@ public class SyncPlexCommand : ICommand
             DeepSearchThroughArtist = DeepSearchThroughArtist,
             PlaylistThreads = PlaylistThreads,
             TrackThreads = TrackThreads,
-            SyncTrackOrder = SyncTrackOrder
+            SyncTrackOrder = SyncTrackOrder,
+            SecondSearchWithoutAlbum = SecondSearchWithoutAlbum
         };
 
         await handler.SyncPlaylists(syncConfig);

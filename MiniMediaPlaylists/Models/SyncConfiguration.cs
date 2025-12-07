@@ -40,4 +40,5 @@ public class SyncConfiguration
     public required int PlaylistThreads { get; init; }
     public required int TrackThreads { get; init; }
     public required bool SyncTrackOrder { get; init; }
+    public required bool SecondSearchWithoutAlbum { get; init; }
 }

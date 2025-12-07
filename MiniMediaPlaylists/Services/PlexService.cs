@@ -2,6 +2,7 @@ using FuzzySharp;
 using MiniMediaPlaylists.Interfaces;
 using MiniMediaPlaylists.Models;
 using MiniMediaPlaylists.Repositories;
+using Newtonsoft.Json;
 using Spectre.Console;
 
 namespace MiniMediaPlaylists.Services;
@@ -68,7 +69,6 @@ public class PlexService : IProviderService
                 .Select(track => new GenericTrack(track.RatingKey, track.Title, track.GrandparentTitle, track.ParentTitle)));
         }
         
-        
         foundTracks.AddRange(response?.MediaContainer?.SearchResult
             ?.Where(track => track.Metadata.Type == "track")
             ?.Select(track => new GenericTrack(
@@ -88,15 +88,14 @@ public class PlexService : IProviderService
 
     public async Task<List<GenericTrack>> DeepSearchTrackAsync(string serverUrl, string artist, string album, string title, Guid snapshotId)
     {
-        string serverMachineIdentifier = await GetMachineIdentifierAsync(serverUrl);
         var response = await _plexApiService.SearchTracksAsync(serverUrl, _syncConfiguration.ToPlexToken, artist);
         var foundTracks = new List<GenericTrack>();
 
         List<int> librarySectionIds = await _plexRepository.GetLibrarySectionIdsAsync(serverUrl, snapshotId);
 
-        foreach (var searchResult in response.MediaContainer.SearchResult
+        foreach (var searchResult in response?.MediaContainer?.SearchResult?
                      .Where(a => a.Metadata.Type == "artist")
-                     .Where(a => Fuzz.Ratio(a.Metadata.Title, artist) >= _syncConfiguration.MatchPercentage))
+                     .Where(a => Fuzz.Ratio(a.Metadata.Title, artist) >= _syncConfiguration.MatchPercentage) ?? [])
         {
             //process Albums
             var albumsSearchResult = await _plexApiService.GetChildrenByRatingKeyAsync(serverUrl, 
@@ -105,7 +104,7 @@ public class PlexService : IProviderService
             
             var albums = albumsSearchResult.MediaContainer?.Metadata?
                 .Where(album => album.Type == "album")
-                .Where(a => Fuzz.Ratio(a.Title.ToLower(), album.ToLower()) >= _syncConfiguration.MatchPercentage)
+                .Where(a => string.IsNullOrWhiteSpace(album) || Fuzz.Ratio(a.Title.ToLower(), album.ToLower()) >= _syncConfiguration.MatchPercentage)
                 .ToList();
 
             foreach (var foundAlbum in albums ?? [])
@@ -132,7 +131,7 @@ public class PlexService : IProviderService
                 foreach (var singleEp in singleEPsSearchResult
                              ?.MediaContainer?.Metadata
                              ?.Where(single => single.Type == "album")
-                             ?.Where(single => Fuzz.Ratio(single.Title.ToLower(), album.ToLower()) >= _syncConfiguration.MatchPercentage) ?? [])
+                             ?.Where(single => string.IsNullOrWhiteSpace(album) || Fuzz.Ratio(single.Title.ToLower(), album.ToLower()) >= _syncConfiguration.MatchPercentage) ?? [])
                 {
                     var tracks = await _plexApiService.GetChildrenByRatingKeyAsync(serverUrl, 
                         _syncConfiguration.ToPlexToken, 
