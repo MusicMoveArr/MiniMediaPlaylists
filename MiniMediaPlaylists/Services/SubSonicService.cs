@@ -16,7 +16,6 @@ public class SubSonicService : IProviderService
     private readonly SyncConfiguration _syncConfiguration;
     private readonly string _username;
     private readonly string _password;
-    private IProviderService _providerServiceImplementation;
     private bool isNotNavidrome = false;
 
     public SubSonicService(string connectionString, string username, string password, SyncConfiguration syncConfiguration)
@@ -72,7 +71,10 @@ public class SubSonicService : IProviderService
         var response = await client.Search.Search3Async(searchQuery, songCount: 200);
 
         return response.SearchResult.Songs
-            .Select(track => new GenericTrack(track.Id, track.Title, track.Artist, track.Album))
+            .Select(track => new GenericTrack(track.Id, track.Title, track.Artist, track.Album)
+            {
+                AlbumArtist = track.Path.Split('/').FirstOrDefault()
+            })
             .ToList();
     }
 
@@ -85,7 +87,7 @@ public class SubSonicService : IProviderService
             password: _password
         );
 
-        if (string.IsNullOrWhiteSpace(artist) || string.IsNullOrWhiteSpace(album) || string.IsNullOrWhiteSpace(title))
+        if (string.IsNullOrWhiteSpace(artist) || string.IsNullOrWhiteSpace(title))
         {
             return trackList;
         }
@@ -98,14 +100,14 @@ public class SubSonicService : IProviderService
         {
             foreach (var artistResult in artistSearchResponse.SearchResult.Artists
                          .Where(a => Fuzz.PartialRatio(a.Name.ToLower(), artist.ToLower()) >= _syncConfiguration.MatchPercentage)
-                         .Where(a => FuzzyHelper.ExactNumberMatch(a.Name, album)))
+                         .Where(a => FuzzyHelper.ExactNumberMatch(a.Name, artist)))
             {
                 var artistInfo = await client.Browsing.GetArtistAsync(artistResult.Id);
 
                 var albumList = artistInfo.Artist.Album
                     .Where(a => Fuzz.PartialRatio(a.Artist.ToLower(), artist.ToLower()) >= _syncConfiguration.MatchPercentage)
-                    .Where(a => FuzzyHelper.ExactNumberMatch(a.Name, album))
-                    .Where(a => Fuzz.Ratio(a.Name, album) >= _syncConfiguration.MatchPercentage)
+                    .Where(a => string.IsNullOrWhiteSpace(album) || Fuzz.Ratio(a.Name, album) >= _syncConfiguration.MatchPercentage)
+                    .Where(a => string.IsNullOrWhiteSpace(album) || FuzzyHelper.ExactNumberMatch(a.Name, album))
                     .ToList();
 
                 foreach (var albumSummary in albumList)
@@ -129,28 +131,31 @@ public class SubSonicService : IProviderService
         }
         
         //go through the list of albums
-        var albumSearchResponse = await client.Search.Search3Async(album, songCount: 0, albumCount: 50, artistCount: 0);
-        for (int index = 50; index < 500; index += 50)
+        if (!string.IsNullOrWhiteSpace(album))
         {
-            foreach (var albumResult in albumSearchResponse.SearchResult.Albums
-                         .Where(a => Fuzz.PartialRatio(a.Artist.ToLower(), artist.ToLower()) >= _syncConfiguration.MatchPercentage)
-                         .Where(a => FuzzyHelper.ExactNumberMatch(a.Name, album))
-                         .Where(a => Fuzz.Ratio(a.Name, album) >= _syncConfiguration.MatchPercentage))
+            var albumSearchResponse = await client.Search.Search3Async(album, songCount: 0, albumCount: 50, artistCount: 0);
+            for (int index = 50; index < 500; index += 50)
             {
-                var albumInfo = await client.Browsing.GetAlbumAsync(albumResult.Id);
+                foreach (var albumResult in albumSearchResponse.SearchResult.Albums
+                             .Where(a => Fuzz.PartialRatio(a.Artist.ToLower(), artist.ToLower()) >= _syncConfiguration.MatchPercentage)
+                             .Where(a => FuzzyHelper.ExactNumberMatch(a.Name, album))
+                             .Where(a => Fuzz.Ratio(a.Name, album) >= _syncConfiguration.MatchPercentage))
+                {
+                    var albumInfo = await client.Browsing.GetAlbumAsync(albumResult.Id);
 
-                var tracks = albumInfo.Album.Song
-                    .Where(track => Fuzz.PartialRatio(track.Title.ToLower(), title.ToLower()) >= _syncConfiguration.MatchPercentage)
-                    .Where(track => FuzzyHelper.ExactNumberMatch(track.Title, title))
-                    .Select(track => new GenericTrack(track.Id, track.Title, track.Artist, track.Album, 0, track.UserRating ?? 0))
-                    .ToList();
-                trackList.AddRange(tracks);
-            }
+                    var tracks = albumInfo.Album.Song
+                        .Where(track => Fuzz.PartialRatio(track.Title.ToLower(), title.ToLower()) >= _syncConfiguration.MatchPercentage)
+                        .Where(track => FuzzyHelper.ExactNumberMatch(track.Title, title))
+                        .Select(track => new GenericTrack(track.Id, track.Title, track.Artist, track.Album, 0, track.UserRating ?? 0))
+                        .ToList();
+                    trackList.AddRange(tracks);
+                }
             
-            albumSearchResponse = await client.Search.Search3Async(album, songCount: 0, albumCount: 50, artistCount: 0, albumOffset: index);
-            if (albumSearchResponse.SearchResult.AlbumCount == 0)
-            {
-                break;
+                albumSearchResponse = await client.Search.Search3Async(album, songCount: 0, albumCount: 50, artistCount: 0, albumOffset: index);
+                if (albumSearchResponse.SearchResult.AlbumCount == 0)
+                {
+                    break;
+                }
             }
         }
         

@@ -350,7 +350,9 @@ public class SyncCommandHandler
             .Select(track => new
             {
                 Track = track,
-                ArtistMatch = Fuzz.PartialRatio(track.ArtistName.ToLower(), fromTrack.ArtistName.ToLower()),
+                ArtistMatch = Math.Max(Fuzz.PartialRatio(track.ArtistName.ToLower(), fromTrack.ArtistName.ToLower()), 
+                    string.IsNullOrWhiteSpace(track.AlbumArtist) ? 0 : Fuzz.PartialRatio(track.AlbumArtist.ToLower(), fromTrack.ArtistName.ToLower())),
+                
                 AlbumMatch = ignoreAlbum ? 100 : Fuzz.Ratio(track.AlbumName.ToLower(), fromTrack.AlbumName.ToLower()),
                 TitleMatch = Fuzz.Ratio(track.Title.ToLower(), fromTrack.Title.ToLower())
             })
@@ -363,7 +365,8 @@ public class SyncCommandHandler
             .Where(track => track.ArtistMatch >= syncConfiguration.MatchPercentage)
             .Where(track => track.AlbumMatch >= syncConfiguration.MatchPercentage)
             .Where(track => track.TitleMatch >= syncConfiguration.MatchPercentage)
-            .Where(track => FuzzyHelper.ExactNumberMatch(track.Track.ArtistName, fromTrack.ArtistName))
+            .Where(track => FuzzyHelper.ExactNumberMatch(track.Track.ArtistName, fromTrack.ArtistName) || 
+                            (string.IsNullOrWhiteSpace(track.Track.AlbumArtist) && FuzzyHelper.ExactNumberMatch(track.Track.AlbumArtist, fromTrack.ArtistName)))
             .Where(track => ignoreAlbum || FuzzyHelper.ExactNumberMatch(track.Track.AlbumName, fromTrack.AlbumName))
             .Where(track => FuzzyHelper.ExactNumberMatch(track.Track.Title, fromTrack.Title))
             .OrderByDescending(track => track.ArtistMatch)

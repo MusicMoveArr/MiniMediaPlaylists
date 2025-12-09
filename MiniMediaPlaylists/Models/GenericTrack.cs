@@ -12,6 +12,7 @@ public class GenericTrack
     public string Uri { get; set; }
     public int PlaylistSortOrder { get; set; }
     public string PlaylistItemId { get; set; }
+    public string? AlbumArtist { get; set; }
 
     public GenericTrack()
     {
