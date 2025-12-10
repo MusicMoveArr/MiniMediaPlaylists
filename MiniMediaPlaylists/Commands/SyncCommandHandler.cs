@@ -150,6 +150,11 @@ public class SyncCommandHandler
 
                             var foundTrack = FindTrack(searchResults, syncConfiguration, fromTrack, false);
 
+                            if (foundTrack != null && toTracks.Any(x => x.Id == foundTrack.Id))
+                            {
+                                return;
+                            }
+
                             bool foundWithDeepSearch = false;
                             if (foundTrack == null && syncConfiguration.DeepSearchThroughArtist)
                             {
@@ -185,6 +190,11 @@ public class SyncCommandHandler
                                     foundTrack = FindTrack(searchResults, syncConfiguration, fromTrack, true);
                                     foundWithDeepSearch = foundTrack != null;
                                 }
+                            }
+                            
+                            if (foundTrack != null && toTracks.Any(x => x.Id == foundTrack.Id))
+                            {
+                                return;
                             }
 
                             if (foundTrack != null)
