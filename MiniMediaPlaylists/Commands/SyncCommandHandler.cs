@@ -201,7 +201,7 @@ public class SyncCommandHandler
                                     });
                                 }
                                 
-                                if (await _toProvider.RateTrackAsync(syncConfiguration.ToName, foundTrack, fromTrack.LikeRating))
+                                if (fromTrack.LikeRating > 0 && await _toProvider.RateTrackAsync(syncConfiguration.ToName, foundTrack, fromTrack.LikeRating))
                                 {
                                     AnsiConsole.WriteLine(Markup.Escape($"Rated song with rating '{fromTrack.LikeRating}' '{foundTrack.ArtistName} - {foundTrack.AlbumName} - {foundTrack.Title}' {(foundWithDeepSearch ? "found with deep search" : "")}"));
                                 }
@@ -230,7 +230,7 @@ public class SyncCommandHandler
                         }
                         catch (Exception e)
                         {
-                            AnsiConsole.WriteLine(Markup.Escape($"Error: {e.Message}"));
+                            AnsiConsole.WriteLine(Markup.Escape($"Error: '{e.Message}' on playlist '{toPlayList.Name}'"));
                         }
 
                         task.Value++;
@@ -383,6 +383,7 @@ public class SyncCommandHandler
         switch (syncConfiguration.ToService)
         {
             case "subsonic": return new SubSonicService(connectionString,syncConfiguration.ToSubSonicUsername, syncConfiguration.ToSubSonicPassword, syncConfiguration);
+            case "navidrome": return new NavidromeService(connectionString, syncConfiguration.ToSubSonicUsername, syncConfiguration.ToSubSonicPassword, syncConfiguration);
             case "plex": return new PlexService(connectionString, syncConfiguration);
             case "spotify": return new SpotifyService(connectionString, syncConfiguration);
             case "tidal": return new TidalService(connectionString, syncConfiguration);
@@ -396,7 +397,8 @@ public class SyncCommandHandler
     {
         switch (syncConfiguration.FromService)
         {
-            case "subsonic": return new SubSonicService(connectionString,syncConfiguration.FromSubSonicUsername, syncConfiguration.FromSubSonicPassword, syncConfiguration);
+            case "subsonic": return new SubSonicService(connectionString, syncConfiguration.FromSubSonicUsername, syncConfiguration.FromSubSonicPassword, syncConfiguration);
+            case "navidrome": return new NavidromeService(connectionString, syncConfiguration.FromSubSonicUsername, syncConfiguration.FromSubSonicPassword, syncConfiguration);
             case "plex": return new PlexService(connectionString, syncConfiguration);
             case "spotify": return new SpotifyService(connectionString, syncConfiguration);
             case "tidal": return new TidalService(connectionString, syncConfiguration);
@@ -411,6 +413,7 @@ public class SyncCommandHandler
         switch (serviceName)
         {
             case "subsonic": 
+            case "navidrome": 
                 return await _snapshotRepository.GetLastCompleteTransactionSubsonicAsync(name);
             case "plex": 
                 return await _snapshotRepository.GetLastCompleteTransactionPlexAsync(name);

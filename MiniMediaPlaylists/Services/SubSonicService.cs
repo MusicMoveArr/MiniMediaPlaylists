@@ -11,12 +11,10 @@ namespace MiniMediaPlaylists.Services;
 
 public class SubSonicService : IProviderService
 {
-    private static NavidromeService navidrome;
     private readonly SubSonicRepository _subSonicRepository;
     private readonly SyncConfiguration _syncConfiguration;
     private readonly string _username;
     private readonly string _password;
-    private bool isNotNavidrome = false;
 
     public SubSonicService(string connectionString, string username, string password, SyncConfiguration syncConfiguration)
     {
@@ -221,27 +219,6 @@ public class SubSonicService : IProviderService
         List<GenericTrack> playlistTracks, 
         int newPlaylistOrder)
     {
-        if (isNotNavidrome)
-        {
-            return false;
-        }
-        
-        try
-        {
-            if (navidrome?.LoginResponse == null)
-            {
-                navidrome = new NavidromeService(serverUrl, _username, _password);
-                await navidrome.LoginAsync();
-                isNotNavidrome = navidrome.LoginResponse == null;
-            }
-        }
-        catch (Exception e)
-        {
-            isNotNavidrome = true;
-            return false;
-        }
-        
-        await navidrome.SetPlaylistTrackOrderAsync(playlist.Id, track.PlaylistSortOrder, newPlaylistOrder);
-        return true;
+        return false;
     }
 }
