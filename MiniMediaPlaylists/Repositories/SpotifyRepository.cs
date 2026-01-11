@@ -13,14 +13,14 @@ public class SpotifyRepository
         _connectionString = connectionString;
     }
     
-    public async Task<SpotifyOwnerModel> GetOwnerByNameAsync(string ownerName)
+    public async Task<SpotifyOwnerModel?> GetOwnerByNameAsync(string ownerName)
     {
         string query = @"SELECT * FROM playlists_spotify_owner
                          WHERE OwnerId = @ownerName";
 
         await using var conn = new NpgsqlConnection(_connectionString);
 
-        return await conn.QueryFirstAsync<SpotifyOwnerModel>(query, 
+        return await conn.QueryFirstOrDefaultAsync<SpotifyOwnerModel>(query, 
             param: new
             {
                 ownerName
