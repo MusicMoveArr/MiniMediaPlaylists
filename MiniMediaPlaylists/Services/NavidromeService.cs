@@ -55,26 +55,43 @@ public class NavidromeService : IProviderService
     public async Task<List<GenericTrack>> SearchTrackAsync(string serverUrl, string artist, string album, string title)
     {
         await _navidromeApiService.LoginAsync(serverUrl, _username, _password);
-        var tracks = await _navidromeApiService.SearchTrackAsync(serverUrl, $"{artist} {title}");
-        var result = new List<GenericTrack>();
 
-        foreach (var track in tracks?.Where(track => !track.Missing) ?? [])
+        var result = new List<GenericTrack>();
+        int pages = 10;
+        int chunksize = 1000;
+        int start = 0;
+        int end = 1000;
+
+        for (int page = 0; page < pages; page++)
         {
-            List<string> artists = new List<string>();
-            artists.Add(track.Artist);
-            artists.Add(track.AlbumArtist);
-            artists.AddRange(track.Participants.AlbumArtist
-                .Select(a => a.Name));
+            var tracks = await _navidromeApiService.SearchTrackAsync(serverUrl, $"{artist} {title}", start, end);
+
+            foreach (var track in tracks?.Where(track => !track.Missing) ?? [])
+            {
+                List<string> artists = new List<string>();
+                artists.Add(track.Artist);
+                artists.Add(track.AlbumArtist);
+                artists.AddRange(track.Participants.AlbumArtist
+                    .Select(a => a.Name));
             
-            artists.AddRange(track.Participants.Artist
-                .Select(a => a.Name));
+                artists.AddRange(track.Participants.Artist
+                    .Select(a => a.Name));
             
-            result.AddRange(artists.Distinct().Select(a => 
-                new GenericTrack(track.Id, track.Title, a, track.Album)
-                {
-                    AlbumArtist = track.AlbumArtist,
-                    LikeRating = track.Rating
-                }));
+                result.AddRange(artists.Distinct().Select(a => 
+                    new GenericTrack(track.Id, track.Title, a, track.Album)
+                    {
+                        AlbumArtist = track.AlbumArtist,
+                        LikeRating = track.Rating
+                    }));
+            }
+
+            start += chunksize;
+            end += chunksize;
+
+            if (tracks?.Count != chunksize)
+            {
+                break;
+            }
         }
 
         return result;

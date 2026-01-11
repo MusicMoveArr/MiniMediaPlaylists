@@ -56,9 +56,9 @@ public class NavidromeApiService
         request.AddHeader("X-Nd-Authorization", "Bearer " + _loginResponse.Token);
         return await client.GetAsync<List<PlaylistEntity>>(request);
     }
-    public async Task<List<TrackEntity>?> SearchTrackAsync(string serverUrl, string title)
+    public async Task<List<TrackEntity>?> SearchTrackAsync(string serverUrl, string title, int start, int end)
     {
-        string url = $"{serverUrl}/api/song?_start=0&_end=1000&title={Uri.EscapeDataString(title)}";
+        string url = $"{serverUrl}/api/song?_start={start}&_end={end}&title={Uri.EscapeDataString(title)}";
         using RestClient client = new RestClient(url);
         
         RestRequest request = new RestRequest();
