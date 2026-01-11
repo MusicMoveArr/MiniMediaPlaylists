@@ -152,6 +152,8 @@ public class SyncCommandHandler
 
                             if (foundTrack != null && toTracks.Any(x => x.Id == foundTrack.Id))
                             {
+                                task.Value++;
+                                task.Description(Markup.Escape(Markup.Escape($"Processing Playlist '{fromPlaylist.Name}', {task.Value} of {fromTracks.Count} processed")));
                                 return;
                             }
 
@@ -194,6 +196,8 @@ public class SyncCommandHandler
                             
                             if (foundTrack != null && toTracks.Any(x => x.Id == foundTrack.Id))
                             {
+                                task.Value++;
+                                task.Description(Markup.Escape(Markup.Escape($"Processing Playlist '{fromPlaylist.Name}', {task.Value} of {fromTracks.Count} processed")));
                                 return;
                             }
 
