@@ -3,8 +3,10 @@ using System.Security.Cryptography;
 using System.Text;
 using DapperBulkQueries.Common;
 using DapperBulkQueries.Npgsql;
+using MiniMediaPlaylists.Models;
 using MiniMediaPlaylists.Models.SpotifyDto;
 using MiniMediaPlaylists.Repositories;
+using MiniMediaPlaylists.Services;
 using Npgsql;
 using Spectre.Console;
 using SpotifyAPI.Web;
@@ -20,6 +22,7 @@ public class PullSpotifyCommandHandler
     private readonly List<SpotifyPlaylistDto> _playlistDtos;
     private readonly List<SpotifyPlaylistTrackDto> _trackDtos;
     private readonly List<SpotifyPlaylistTrackArtistDto> _trackArtistDtos;
+    private readonly SnapshotRetentionService _snapshotRetentionService;
     
     public PullSpotifyCommandHandler(string connectionString)
     {
@@ -29,6 +32,7 @@ public class PullSpotifyCommandHandler
         _playlistDtos = new List<SpotifyPlaylistDto>();
         _trackDtos = new List<SpotifyPlaylistTrackDto>();
         _trackArtistDtos = new List<SpotifyPlaylistTrackArtistDto>();
+        _snapshotRetentionService = new SnapshotRetentionService();
     }
 
     public async Task PullSpotifyPlaylists(
@@ -37,8 +41,10 @@ public class PullSpotifyCommandHandler
         string authRedirectUri, 
         string authCallbackListener,
         string ownerName,
-        string likedSongsPlaylistName)
+        string likedSongsPlaylistName, 
+        RetentionPolicy retentionPolicy)
     {
+        
         var spotifyOwnerModel = await _spotifyRepository.GetOwnerByNameAsync(ownerName);
         SpotifyClient spotifyClient;
         string refreshToken = string.Empty;
@@ -69,6 +75,11 @@ public class PullSpotifyCommandHandler
         var ownerId = await _spotifyRepository.UpsertOwnerAsync(currentUser.Id, spotifyClientId, spotifySecretId, refreshToken);
         Guid snapshotId = await _snapshotRepository.CreateSnapshotAsync(ownerId, "Spotify");
 
+        var allSnapshots = await _snapshotRepository.GetSnapshotsByServerIdAsync(ownerId);
+        var snapshotIdsToCleanup = _snapshotRetentionService.GetSnapshotsToRemove(allSnapshots, retentionPolicy);
+        await _spotifyRepository.DeleteSnapshotsAsync(snapshotIdsToCleanup);
+        await _snapshotRepository.DeleteSnapshotsAsync(snapshotIdsToCleanup);
+        
         await AnsiConsole.Progress()
             .HideCompleted(true)
             .AutoClear(true)

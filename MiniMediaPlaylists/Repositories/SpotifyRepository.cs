@@ -291,4 +291,26 @@ public class SpotifyRepository
                 snapshotId
             })).ToList();
     }
+    
+    public async Task DeleteSnapshotsAsync(List<Guid> snapshotIds)
+    {
+        string queryPlaylist = @"delete from playlists_spotify_playlist 
+                                 where snapshotid = ANY(@snapshotIds)";
+        
+        string queryPlaylistTracks = @"delete from playlists_spotify_playlist_track 
+                                       where snapshotid = ANY(@snapshotIds)";
+
+        await using var conn = new NpgsqlConnection(_connectionString);
+
+        await conn.ExecuteAsync(queryPlaylist,
+            param: new
+            {
+                snapshotIds
+            });
+        await conn.ExecuteAsync(queryPlaylistTracks,
+            param: new
+            {
+                snapshotIds
+            });
+    }
 }
