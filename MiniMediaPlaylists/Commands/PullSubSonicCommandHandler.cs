@@ -10,6 +10,8 @@ using SubSonicMedia.Responses.Playlists.Models;
 using SubSonicMedia.Responses.Search.Models;
 using DapperBulkQueries.Common;
 using DapperBulkQueries.Npgsql;
+using MiniMediaPlaylists.Models;
+using MiniMediaPlaylists.Services;
 
 namespace MiniMediaPlaylists.Commands;
 
@@ -18,20 +20,22 @@ public class PullSubSonicCommandHandler
     private readonly string _connectionString;
     private readonly SubSonicRepository _subSonicRepository;
     private readonly SnapshotRepository _snapshotRepository;
+    private readonly SnapshotRetentionService _snapshotRetentionService;
 
-    
     public PullSubSonicCommandHandler(string connectionString)
     {
         _connectionString = connectionString;
         _subSonicRepository = new SubSonicRepository(connectionString);
         _snapshotRepository = new SnapshotRepository(connectionString);
+        _snapshotRetentionService = new SnapshotRetentionService();
     }
 
     public async Task PullSubSonicPlaylists(
         string serverUrl, 
         string username, 
         string password, 
-        string likedSongsPlaylistName)
+        string likedSongsPlaylistName, 
+        RetentionPolicy retentionPolicy)
     {
         var connection = new SubsonicConnectionInfo(
             serverUrl: serverUrl,
@@ -44,6 +48,11 @@ public class PullSubSonicCommandHandler
         Guid serverId = await _subSonicRepository.UpsertServerAsync(serverUrl);
         Guid snapshotId = await _snapshotRepository.CreateSnapshotAsync(serverId, "Subsonic");
 
+        var allSnapshots = await _snapshotRepository.GetSnapshotsByServerIdAsync(serverId);
+        var snapshotIdsToCleanup = _snapshotRetentionService.GetSnapshotsToRemove(allSnapshots, retentionPolicy);
+        await _subSonicRepository.DeleteSnapshotsAsync(snapshotIdsToCleanup);
+        await _snapshotRepository.DeleteSnapshotsAsync(snapshotIdsToCleanup);
+        
         List<SubsonicPlaylistDto> playlistDtos = new List<SubsonicPlaylistDto>();
         List<SubsonicPlaylistTrackDto> trackDtos = new List<SubsonicPlaylistTrackDto>();
         
