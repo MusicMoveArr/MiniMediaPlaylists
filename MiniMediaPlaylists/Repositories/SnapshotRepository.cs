@@ -1,4 +1,5 @@
 using Dapper;
+using MiniMediaPlaylists.Models;
 using Npgsql;
 
 namespace MiniMediaPlaylists.Repositories;
@@ -128,6 +129,34 @@ public class SnapshotRepository
             param: new
             {
                 ownerId
+            });
+    }
+    
+    public async Task<List<SnapshotModel>> GetSnapshotsByServerIdAsync(Guid serverId)
+    {
+        string query = @"SELECT *
+                         FROM playlists_snapshot snapshot
+                         WHERE snapshot.ServerId = @serverId";
+
+        await using var conn = new NpgsqlConnection(_connectionString);
+
+        return (await conn.QueryAsync<SnapshotModel>(query,
+            param: new
+            {
+                serverId
+            })).ToList();
+    }
+    public async Task DeleteSnapshotsAsync(List<Guid> snapshotIds)
+    {
+        string queryPlaylist = @"delete from playlists_snapshot 
+                                 where id = ANY(@snapshotIds)";
+
+        await using var conn = new NpgsqlConnection(_connectionString);
+
+        await conn.ExecuteAsync(queryPlaylist,
+            param: new
+            {
+                snapshotIds
             });
     }
 }

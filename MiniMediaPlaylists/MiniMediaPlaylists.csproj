@@ -79,6 +79,9 @@
       <None Update="DbScripts\20251126 plex playlist itemid.sql">
         <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       </None>
+      <None Update="DbScripts\20260111 snapshotid indexes.sql">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
     </ItemGroup>
 
 </Project>

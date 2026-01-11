@@ -1,0 +1,14 @@
+CREATE INDEX idx_playlists_plex_playlist_snapshotid ON public.playlists_plex_playlist (snapshotid);
+CREATE INDEX idx_playlists_plex_playlist_track_snapshotid ON public.playlists_plex_playlist_track (snapshotid);
+
+CREATE INDEX idx_playlists_jellyfin_playlist_snapshotid ON public.playlists_jellyfin_playlist (snapshotid);
+CREATE INDEX idx_playlists_jellyfin_playlist_track_snapshotid ON public.playlists_jellyfin_playlist_track (snapshotid);
+
+CREATE INDEX idx_playlists_spotify_playlist_snapshotid ON public.playlists_spotify_playlist (snapshotid);
+CREATE INDEX idx_playlists_spotify_playlist_track_snapshotid ON public.playlists_spotify_playlist_track (snapshotid);
+
+CREATE INDEX idx_playlists_subsonic_playlist_snapshotid ON public.playlists_subsonic_playlist (snapshotid);
+CREATE INDEX idx_playlists_subsonic_playlist_track_snapshotid ON public.playlists_subsonic_playlist_track (snapshotid);
+
+CREATE INDEX idx_playlists_tidal_playlist_snapshotid ON public.playlists_tidal_playlist (snapshotid);
+CREATE INDEX idx_playlists_tidal_playlist_track_snapshotid ON public.playlists_tidal_playlist_track (snapshotid);

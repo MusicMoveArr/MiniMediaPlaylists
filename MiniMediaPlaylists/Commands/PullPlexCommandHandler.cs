@@ -1,6 +1,7 @@
 using System.Net;
 using DapperBulkQueries.Common;
 using DapperBulkQueries.Npgsql;
+using MiniMediaPlaylists.Models;
 using MiniMediaPlaylists.Models.PlexDto;
 using MiniMediaPlaylists.Repositories;
 using MiniMediaPlaylists.Services;
@@ -18,6 +19,7 @@ public class PullPlexCommandHandler
     private readonly SnapshotRepository _snapshotRepository;
     private readonly List<PlexPlaylistDto> _playlistDtos;
     private readonly List<PlexPlaylistTrackDto> _trackDtos;
+    private readonly SnapshotRetentionService _snapshotRetentionService;
     
     public PullPlexCommandHandler(string connectionString)
     {
@@ -26,15 +28,21 @@ public class PullPlexCommandHandler
         _snapshotRepository = new SnapshotRepository(connectionString);
         _playlistDtos = new List<PlexPlaylistDto>();
         _trackDtos = new List<PlexPlaylistTrackDto>();
+        _snapshotRetentionService = new SnapshotRetentionService();
     }
 
-    public async Task PullPlexPlaylists(string serverUrl, string token, int trackLimit)
+    public async Task PullPlexPlaylists(string serverUrl, string token, int trackLimit, RetentionPolicy retentionPolicy)
     {
         PlexApiService plexApiService = new PlexApiService();
         var playlists = await plexApiService.GetPlaylistsAsync(serverUrl, token);
 
         var serverId = await _plexRepository.UpsertServerAsync(serverUrl);
         Guid snapshotId = await _snapshotRepository.CreateSnapshotAsync(serverId, "Plex");
+
+        var allSnapshots = await _snapshotRepository.GetSnapshotsByServerIdAsync(serverId);
+        var snapshotIdsToCleanup = _snapshotRetentionService.GetSnapshotsToRemove(allSnapshots, retentionPolicy);
+        await _plexRepository.DeleteSnapshotsAsync(snapshotIdsToCleanup);
+        await _snapshotRepository.DeleteSnapshotsAsync(snapshotIdsToCleanup);
         
         await AnsiConsole.Progress()
             .HideCompleted(true)
