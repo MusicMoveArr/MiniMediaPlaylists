@@ -56,7 +56,7 @@
         <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       </None>
       <None Update="DbScripts\20250714 tidal tables.sql">
-        <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       </None>
       <None Update="DbScripts\20250721 jellyfin tables.sql">
         <CopyToOutputDirectory>Always</CopyToOutputDirectory>
