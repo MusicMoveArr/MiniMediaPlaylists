@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using System.Text;
+using MiniMediaPlaylists.Models;
 using MiniMediaPlaylists.Models.Jellyfin;
 using MiniMediaPlaylists.Repositories;
 using MiniMediaPlaylists.Services;
@@ -11,17 +12,21 @@ public class PullJellyfinCommandHandler
 {
     private readonly JellyfinRepository _jellyfinRepository;
     private readonly SnapshotRepository _snapshotRepository;
+    private readonly SnapshotRetentionService _snapshotRetentionService;
+    
     public PullJellyfinCommandHandler(string connectionString)
     {
         _jellyfinRepository = new JellyfinRepository(connectionString);
         _snapshotRepository = new SnapshotRepository(connectionString);
+        _snapshotRetentionService = new SnapshotRetentionService();
     }
 
     public async Task PullJellyfinPlaylists(
         string serverUrl, 
         string username, 
         string password, 
-        string favoriteSongsPlaylistName)
+        string favoriteSongsPlaylistName, 
+        RetentionPolicy retentionPolicy)
     {
         JellyfinApiService jellyfinApiService = new JellyfinApiService();
         
@@ -42,6 +47,11 @@ public class PullJellyfinCommandHandler
 
         Guid snapshotId = await _snapshotRepository.CreateSnapshotAsync(dbAuthInfo.Id, "Jellyfin");
 
+        var allSnapshots = await _snapshotRepository.GetSnapshotsByServerIdAsync(dbAuthInfo.Id);
+        var snapshotIdsToCleanup = _snapshotRetentionService.GetSnapshotsToRemove(allSnapshots, retentionPolicy);
+        await _jellyfinRepository.DeleteSnapshotsAsync(snapshotIdsToCleanup);
+        await _snapshotRepository.DeleteSnapshotsAsync(snapshotIdsToCleanup);
+        
         await AnsiConsole.Progress()
             .HideCompleted(true)
             .AutoClear(true)
