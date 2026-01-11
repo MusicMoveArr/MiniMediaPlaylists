@@ -1,5 +1,6 @@
 using System.Net;
 using System.Text;
+using MiniMediaPlaylists.Models;
 using MiniMediaPlaylists.Models.Tidal;
 using MiniMediaPlaylists.Repositories;
 using MiniMediaPlaylists.Services;
@@ -11,11 +12,13 @@ public class PullTidalCommandHandler
 {
     private readonly TidalRepository _tidalRepository;
     private readonly SnapshotRepository _snapshotRepository;
+    private readonly SnapshotRetentionService _snapshotRetentionService;
 
     public PullTidalCommandHandler(string connectionString)
     {
         _tidalRepository = new TidalRepository(connectionString);
         _snapshotRepository = new SnapshotRepository(connectionString);
+        _snapshotRetentionService = new SnapshotRetentionService();
     }
 
     public async Task PullTidalPlaylists(
@@ -25,7 +28,8 @@ public class PullTidalCommandHandler
         string authRedirectUri,
         string authCallbackListener,
         string likedSongsPlaylistName,
-        string ownerName)
+        string ownerName, 
+        RetentionPolicy retentionPolicy)
     {
         TidalAPIService tidalApiService = new TidalAPIService(tidalClientId, tidalSecretId, tidalCountryCode);
 
@@ -45,6 +49,11 @@ public class PullTidalCommandHandler
         playlists = await GetAllPlaylistsAsync(playlists, tidalApiService);
         Guid snapshotId = await _snapshotRepository.CreateSnapshotAsync(owner.Id, "Tidal");
 
+        var allSnapshots = await _snapshotRepository.GetSnapshotsByServerIdAsync(owner.Id);
+        var snapshotIdsToCleanup = _snapshotRetentionService.GetSnapshotsToRemove(allSnapshots, retentionPolicy);
+        await _tidalRepository.DeleteSnapshotsAsync(snapshotIdsToCleanup);
+        await _snapshotRepository.DeleteSnapshotsAsync(snapshotIdsToCleanup);
+        
         await AnsiConsole.Progress()
             .HideCompleted(true)
             .AutoClear(true)

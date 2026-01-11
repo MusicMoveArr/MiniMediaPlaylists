@@ -1,6 +1,7 @@
 using CliFx;
 using CliFx.Attributes;
 using CliFx.Infrastructure;
+using MiniMediaPlaylists.Models;
 
 namespace MiniMediaPlaylists.Commands;
 
@@ -56,9 +57,47 @@ public class PullTidalCommand : ICommand
         EnvironmentVariable = "PULLTIDAL_LIKED_PLAYLIST_NAME")]
     public string LikedSongsPlaylistName { get; init; }
 
+    [CommandOption("keep-hourly",
+        Description = "Set retention policy for how many snapshots to keep of playlists.",
+        IsRequired = false,
+        EnvironmentVariable = "PULLTIDAL_KEEP_HOURLY")]
+    public int RetentionKeepHourly { get; init; } = 24;
+
+    [CommandOption("keep-daily",
+        Description = "Set retention policy for how many snapshots to keep of playlists.",
+        IsRequired = false,
+        EnvironmentVariable = "PULLTIDAL_KEEP_DAILY")]
+    public int RetentionKeepDaily { get; init; } = 7;
+
+    [CommandOption("keep-weekly",
+        Description = "Set retention policy for how many snapshots to keep of playlists.",
+        IsRequired = false,
+        EnvironmentVariable = "PULLTIDAL_KEEP_WEEKLY")]
+    public int RetentionKeepWeekly { get; init; } = 4;
+
+    [CommandOption("keep-monthly",
+        Description = "Set retention policy for how many snapshots to keep of playlists.",
+        IsRequired = false,
+        EnvironmentVariable = "PULLTIDAL_KEEP_MOTHLY")]
+    public int RetentionKeepMonthly { get; init; } = 12;
+
+    [CommandOption("keep-yearly",
+        Description = "Set retention policy for how many snapshots to keep of playlists.",
+        IsRequired = false,
+        EnvironmentVariable = "PULLTIDAL_KEEP_YEARLY")]
+    public int RetentionKeepYearly { get; init; } = 10;
+
     public async ValueTask ExecuteAsync(IConsole console)
     {
         var handler = new PullTidalCommandHandler(ConnectionString);
+        var retentionPolicy = new RetentionPolicy
+        {
+            KeepHourly = RetentionKeepHourly,
+            KeepDaily = RetentionKeepDaily,
+            KeepWeekly = RetentionKeepWeekly,
+            KeepMonthly = RetentionKeepMonthly,
+            KeepYearly = RetentionKeepYearly
+        };
 
         await handler.PullTidalPlaylists(
             TidalClientId, 
@@ -67,6 +106,7 @@ public class PullTidalCommand : ICommand
             AuthRedirectUri, 
             AuthCallbackListener, 
             LikedSongsPlaylistName,
-            OwnerName);
+            OwnerName,
+            retentionPolicy);
     }
 }
