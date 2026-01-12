@@ -33,8 +33,9 @@ Loving the work I do? buy me a coffee https://buymeacoffee.com/musicmovearr
 2. PullPlex - Pull all your Plex playlists
 3. PullSpotify - Pull all your spotify playlists
 4. PullSubsonic - Pull all your SubSonic playlists
-5. PullTidal - Pull all your Tidal playlists
-6. PullJellyfin  - Pull all your Jellyfin playlists
+5. PullNavidrome - Pull all your Navidrome playlists
+6. PullTidal - Pull all your Tidal playlists
+7. PullJellyfin  - Pull all your Jellyfin playlists
 
 # Feature list per service
 | Service | Sync Playlists | Sync Favorite tracks | Create Playlist | Sync Track Order | Rate Tracks | Deep Search Tracks |
@@ -68,26 +69,71 @@ services:
       - CRON=0 0 */6 ? * *
 ```
 
+# Docker-Compose example 2
+Pull Plex playlists, Pull Navidrome playlists and sync every 10 minutes from Plex to Navidrome
+```
+services:
+  MiniMediaPlaylists_SyncPlexToNavidrome:
+    image: musicmovearr/minimediaplaylists:latest
+    container_name: MiniMediaPlaylists_SyncPlexToNavidrome
+    restart: always
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+    environment:
+      - COMMAND=pullplex:pullnavidrome:sync
+      - CONNECTIONSTRING=Host=192.168.1.2;Username=postgres;Password=postgres;Database=minimedia
+      - CRON=0 0/10 * ? * * *
+      - PGID=1000
+      - PUID=1000
+      - PULLPLEX_LIMIT=5000
+      - PULLPLEX_TOKEN=xxxxxxxx
+      - PULLPLEX_URL=http://xxxxxxx/
+      - PULLNAVIDROME_USERNAME=xxxxxxxx
+      - PULLNAVIDROME_PASSWORD=xxxxxxxx
+      - PULLNAVIDROME_URL=http://xxxxxxx/
+      - PULLNAVIDROME_LIKED_PLAYLIST_NAME=Liked Tracks - Navidrome
+      #sync settings Plex > Navidrome
+      - SYNC_FROM_SERVICE=plex
+      - SYNC_FROM_NAME=http://xxxxxxx/
+      - SYNC_FROM_LIKE_PLAYLIST_NAME=❤️ Tracks
+      - SYNC_FROM_SKIP_PLAYLISTS=Recently Played
+      - SYNC_FROM_SKIP_PREFIX_PLAYLISTS=Recently Played:#
+      - SYNC_TO_SERVICE=navidrome
+      - SYNC_TO_NAME=http://xxxxxxx/
+      - SYNC_TO_SUBSONIC_USERNAME=xxxxxxx
+      - SYNC_TO_SUBSONIC_PASSWORD=xxxxxxx
+      - SYNC_DEEP_SEARCH=true
+      - SYNC_TO_LIKE_PLAYLIST_NAME=Liked Tracks - Navidrome
+      - SYNC_PLAYLIST_THREADS=5
+      - SYNC_TRACK_THREADS=1
+      - SYNC_TRACK_ORDER=true
+      - SYNC_SECOND_SEARCH_WITHOUT_ALBUM=true
+```
+
 # Description of arguments
 | Command | Longname Argument  | Description | Example |
 | ------------- | ------------- | ------------- | ------------- |
-| PullPlex | --connection-string | ConnectionString for Postgres database. | Host=192.168.1.2;Username=postgres;Password=postgres;Database=minimedia |
+| All Commands | --connection-string | ConnectionString for Postgres database. | Host=192.168.1.2;Username=postgres;Password=postgres;Database=minimedia |
+| All Pull Commands | --keep-hourly | Set retention policy for how many snapshots to keep of playlists. | 24 |
+| All Pull Commands | --keep-daily | Set retention policy for how many snapshots to keep of playlists. | 7 |
+| All Pull Commands | --keep-weekly | Set retention policy for how many snapshots to keep of playlists. | 4 |
+| All Pull Commands | --keep-monthly | Set retention policy for how many snapshots to keep of playlists. | 12 |
+| All Pull Commands | --keep-yearly | Set retention policy for how many snapshots to keep of playlists. | 10 |
 | PullPlex | --url | Plex server url. | http://xxxxxxx/ |
 | PullPlex | --token | Plex token for authentication. | xxxxxxx |
 | PullPlex | --track-limit | Set the playlist track limit to pull. | 5000 |
-| PullSpotify | --connection-string | ConnectionString for Postgres database. | Host=192.168.1.2;Username=postgres;Password=postgres;Database=minimedia |
 | PullPlex | --spotify-client-id | Spotify Client Id, to use for the Spotify API. | xxxxxxx |
 | PullPlex | --spotify-secret-id | Spotify Secret Id, to use for the Spotify API. | xxxxxxx |
 | PullPlex | --authentication-redirect-uri | The redirect uri to use for Authentication. | https://xxxxxxxxxxxx.ngrok-free.app/callback |
 | PullPlex | --authentication-callback-listener | The callback listener url to use for Authentication. | http://*:5000/callback/ |
 | PullPlex | --owner-name | The name of the owner who'se account this belongs to. | user_1234 |
 | PullPlex | --liked-playlist-name | Save the liked songs into a specific playlist name, in Spotify liked songs are in 'Liked Songs' which is a fake playlist. | Liked Songs |
-| PullSubsonic | --connection-string | ConnectionString for Postgres database. | Host=192.168.1.2;Username=postgres;Password=postgres;Database=minimedia |
 | PullSubsonic | --url | SubSonic server url. | http://xxxxxxx/ |
 | PullSubsonic | --username | SubSonic username for authentication. | xxxxxxx |
 | PullSubsonic | --password | SubSonic password for authentication. | xxxxxxx |
 | PullSubsonic | --liked-playlist-name | Save the liked songs into a specific playlist name, in SubSonic liked songs are not in a playlist. | Liked Songs |
-| PullTidal | --connection-string | ConnectionString for Postgres database. | Host=192.168.1.2;Username=postgres;Password=postgres;Database=minimedia |
 | PullTidal | --client-id | Tidal Client Id, to use for the Tidal API. | xxxxxx |
 | PullTidal | --secret-id | Tidal Secret Id, to use for the Tidal API. | xxxxxx |
 | PullTidal | --authentication-redirect-uri | The redirect uri to use for Authentication. | https://xxxxxx.ngrok-free.app/callback |
@@ -95,12 +141,10 @@ services:
 | PullTidal | --owner-name | The name of the owner who'se account this belongs to. | user_12345 |
 | PullTidal | --authentication-callback-listener | The callback listener url to use for Authentication. | http://*:5000/callback/ |
 | PullTidal | --liked-playlist-name | Save the liked songs into a specific playlist name, in Tidal liked songs are not in a playlist. | Liked Songs |
-| PullJellyfin | --connection-string | ConnectionString for Postgres database. | Host=192.168.1.2;Username=postgres;Password=postgres;Database=minimedia |
 | PullJellyfin | --url | Jellyfin server url. | http://xxxxxxx/ |
 | PullJellyfin | --username | Jellyfin username for authentication. | xxxxxxx |
 | PullJellyfin | --password | Jellyfin password for authentication. | xxxxxxx |
 | PullJellyfin | --favorite-playlist-name | Save the favorite songs into a specific playlist name, in Jellyfin liked songs are not in a playlist. | Favorites |
-| Sync | --connection-string | ConnectionString for Postgres database. | Host=192.168.1.2;Username=postgres;Password=postgres;Database=minimedia |
 | Sync | --from-service | Sync from the selected service. | plex |
 | Sync | --from-name | Sync from either the name (username etc) or url. | http://xxxxxxx/ |
 | Sync | --from-playlist-name | Sync from this specific playlist name. | Liked Some Songs |
@@ -110,7 +154,6 @@ services:
 | Sync | --from-jellyfin-username | Jellyfin username for authentication. | xxxxxxx |
 | Sync | --from-jellyfin-password | Jellyfin password for authentication. | xxxxxxx |
 | Sync | --from-skip-playlists | Skip to sync by playlist names. | Disliked Songs |
-| Sync | --from-skip-prefix-playlists | Skip to sync by playlists that start with prefix(es). | # |
 | Sync | --from-skip-prefix-playlists | Skip to sync by playlists that start with prefix(es). | # |
 | Sync | --from-tidal-country-code | Tidal's CountryCode (e.g. US, FR, NL, DE etc). | US |
 | Sync | --to-service | Sync to the selected service. | spotify |
@@ -130,6 +173,8 @@ services:
 | Sync | --to-like-playlist-name | The name of the like/favorite songs playlist, when using this setting it will like/favorite tracks instead of adding them to a target playlist. | Starred Songs |
 | Sync | --playlist-threads | The amount of threads to use for parallel processing. | 10 |
 | Sync | --track-threads | The amount of threads to use for parallel processing each track of a playlist. | 2 |
+| Sync | --sync-track-order | Synchronize the track order in playlists. | true |
+| Sync | --second-search-without-album | When searching with album cannot find all the tracks, try again without album name. | true |
 
 # Pull Spotify playlists
 Personally I would say, since the first authentication with Spotify requires now a HTTPS connection, create a account at https://ngrok.com
