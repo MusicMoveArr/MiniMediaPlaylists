@@ -82,6 +82,9 @@
       <None Update="DbScripts\20260111 snapshotid indexes.sql">
         <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       </None>
+      <None Update="DbScripts\20260112 navidrome albumartist.sql">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
     </ItemGroup>
 
 </Project>

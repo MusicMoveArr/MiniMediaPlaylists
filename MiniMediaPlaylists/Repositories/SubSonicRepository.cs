@@ -73,7 +73,8 @@ public class SubSonicRepository
                              track.Album as AlbumName,
                              track.title as Title,
                              track.UserRating as LikeRating,
-                             track.playlist_sortorder AS PlaylistSortOrder
+                             track.playlist_sortorder AS PlaylistSortOrder,
+                             track.AlbumArtist AS AlbumArtist
                          from playlists_subsonic_server pps 
                          join playlists_subsonic_playlist list on list.serverid = pps.id and list.snapshotId = @snapshotId
                          join playlists_subsonic_playlist_track track on track.serverid = pps.id and track.playlistid = list.id and track.snapshotId = @snapshotId
@@ -99,7 +100,8 @@ public class SubSonicRepository
                              track.Artist as ArtistName,
                              track.Album as AlbumName,
                              track.title as Title,
-                             track.UserRating as LikeRating
+                             track.UserRating as LikeRating,
+                             track.AlbumArtist AS AlbumArtist
                          from playlists_subsonic_server pps 
                          join playlists_subsonic_playlist list on list.serverid = pps.id and list.snapshotId = @snapshotId
                          join playlists_subsonic_playlist_track track on track.serverid = pps.id and track.playlistid = list.id and track.snapshotId = @snapshotId

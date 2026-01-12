@@ -19,6 +19,8 @@ public class SubsonicPlaylistTrackDto
     public int UserRating { get; set; }
     public Guid SnapshotId { get; set; }
     public int Playlist_SortOrder { get; set; }
+    public string AlbumArtist { get; set; }
+    public string AlbumArtistId { get; set; }
     
     public static readonly List<string> PlaylistTrackDtoColumnNames =
     [
@@ -38,6 +40,8 @@ public class SubsonicPlaylistTrackDto
         nameof(AddedAt),
         nameof(UserRating),
         nameof(SnapshotId),
-        nameof(Playlist_SortOrder)
+        nameof(Playlist_SortOrder),
+        nameof(AlbumArtist),
+        nameof(AlbumArtistId)
     ];
 }

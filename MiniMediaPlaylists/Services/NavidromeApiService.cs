@@ -46,7 +46,7 @@ public class NavidromeApiService
     }
     public async Task<List<PlaylistEntity>?> GetPlaylistsAsync(string serverUrl)
     {
-        string url = $"{serverUrl}/api/playlist?_start=0&_end=1000000";
+        string url = $"{serverUrl}/api/playlist";
         using RestClient client = new RestClient(url);
         
         RestRequest request = new RestRequest();
@@ -55,6 +55,30 @@ public class NavidromeApiService
         request.AddHeader("Priority", "u=1, i");
         request.AddHeader("X-Nd-Authorization", "Bearer " + _loginResponse.Token);
         return await client.GetAsync<List<PlaylistEntity>>(request);
+    }
+    public async Task<List<TrackEntity>?> GetPlaylistTracksAsync(string serverUrl, string playlistId)
+    {
+        string url = $"{serverUrl}/api/playlist/{playlistId}/tracks?_order=ASC&_sort=id&playlist_id={playlistId}";
+        using RestClient client = new RestClient(url);
+        
+        RestRequest request = new RestRequest();
+        request.AddCookie("X-Nd-Client-Unique-Id", _loginResponse.Id, "/", client.Options.BaseUrl.Host);
+        request.AddHeader("X-Nd-Client-Unique-Id", _loginResponse.Id);
+        request.AddHeader("Priority", "u=1, i");
+        request.AddHeader("X-Nd-Authorization", "Bearer " + _loginResponse.Token);
+        return await client.GetAsync<List<TrackEntity>>(request);
+    }
+    public async Task<List<TrackEntity>?> GetStarredTracksAsync(string serverUrl)
+    {
+        string url = $"{serverUrl}/api/song?&_order=ASC&_sort=title&starred=true";
+        using RestClient client = new RestClient(url);
+        
+        RestRequest request = new RestRequest();
+        request.AddCookie("X-Nd-Client-Unique-Id", _loginResponse.Id, "/", client.Options.BaseUrl.Host);
+        request.AddHeader("X-Nd-Client-Unique-Id", _loginResponse.Id);
+        request.AddHeader("Priority", "u=1, i");
+        request.AddHeader("X-Nd-Authorization", "Bearer " + _loginResponse.Token);
+        return await client.GetAsync<List<TrackEntity>>(request);
     }
     public async Task<List<TrackEntity>?> SearchTrackAsync(string serverUrl, string title, int start, int end)
     {
