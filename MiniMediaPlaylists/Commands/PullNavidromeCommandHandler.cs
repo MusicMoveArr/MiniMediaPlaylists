@@ -126,7 +126,7 @@ public class PullNavidromeCommandHandler
                         
                         trackDtos.AddRange(tracks.Select(track => new SubsonicPlaylistTrackDto
                         {
-                            Id = track.Id,
+                            Id = !string.IsNullOrWhiteSpace(track.MediaFileId) ? track.MediaFileId : track.Id,
                             Title = !string.IsNullOrWhiteSpace(track.Title) ? track.Title : string.Empty,
                             Artist = !string.IsNullOrWhiteSpace(track.Artist) ? track.Artist : string.Empty,
                             Album = !string.IsNullOrWhiteSpace(track.Album) ? track.Album : string.Empty,
