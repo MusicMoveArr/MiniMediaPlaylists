@@ -92,4 +92,21 @@ public class NavidromeApiService
         request.AddHeader("X-Nd-Authorization", "Bearer " + _loginResponse.Token);
         return await client.GetAsync<List<TrackEntity>>(request);
     }
+    public async Task AddTrackToPlaylistAsync(string serverUrl, string playlistId, string trackId)
+    {
+        string url = $"{serverUrl}/api/playlist/{playlistId}/tracks";
+        using RestClient client = new RestClient(url);
+        
+        RestRequest request = new RestRequest();
+        request.AddCookie("X-Nd-Client-Unique-Id", _loginResponse.Id, "/", client.Options.BaseUrl.Host);
+        request.AddHeader("X-Nd-Client-Unique-Id", _loginResponse.Id);
+        request.AddHeader("Priority", "u=1, i");
+        request.AddHeader("X-Nd-Authorization", "Bearer " + _loginResponse.Token);
+        request.AddJsonBody(new
+        {
+            ids = new string[] { trackId }
+        });
+        
+        await client.ExecutePostAsync(request);
+    }
 }

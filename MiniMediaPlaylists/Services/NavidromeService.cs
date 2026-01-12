@@ -104,8 +104,7 @@ public class NavidromeService : IProviderService
 
     public async Task<bool> AddTrackToPlaylistAsync(string serverUrl, string playlistId, GenericTrack track)
     {
-        using var client = GetSubsonicClient(serverUrl);
-        await client.Playlists.UpdatePlaylistAsync(playlistId, songIdsToAdd: [track.Id]);
+        await _navidromeApiService.AddTrackToPlaylistAsync(serverUrl, playlistId, track.Id);
         return true;
     }
 
