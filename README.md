@@ -71,6 +71,8 @@ services:
 
 # Docker-Compose example 2
 Pull Plex playlists, Pull Navidrome playlists and sync every 10 minutes from Plex to Navidrome
+As a side note, you don't need to actually have "Liked Tracks - Navidrome" a playlist named like this in Navidrome
+It's more of a internal playlist name because liked/starred/favorite (etc) tracks are not in a normal playlist
 ```
 services:
   MiniMediaPlaylists_SyncPlexToNavidrome:
