@@ -65,7 +65,8 @@ public class SubSonicService : IProviderService
         );
         using var client = new SubsonicClient(connection);
 
-        string searchQuery = $"{artist} {title}";
+        string searchQuery = $"{artist} {title}".Replace("-", string.Empty);
+        
         var response = await client.Search.Search3Async(searchQuery, songCount: 200);
 
         return response.SearchResult.Songs

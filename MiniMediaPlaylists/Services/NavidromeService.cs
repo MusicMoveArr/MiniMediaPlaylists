@@ -62,6 +62,8 @@ public class NavidromeService : IProviderService
         int start = 0;
         int end = 1000;
 
+        title = title.Replace("-", string.Empty);
+
         for (int page = 0; page < pages; page++)
         {
             var tracks = await _navidromeApiService.SearchTrackAsync(serverUrl, $"{artist} {title}", start, end);
