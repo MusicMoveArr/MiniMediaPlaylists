@@ -1,5 +1,3 @@
-using MiniMediaPlaylists.Interfaces;
-
 namespace MiniMediaPlaylists.Models;
 
 public class GenericTrack

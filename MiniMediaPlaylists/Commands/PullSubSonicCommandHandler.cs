@@ -119,8 +119,6 @@ public class PullSubSonicCommandHandler
                         if (!string.IsNullOrWhiteSpace(genLikedPlaylistName) &&
                             string.Equals(genLikedPlaylistName, playlist.Id))
                         {
-                            //personally I don't get the UserRating/AverageRating, it's always NULL
-                            //for now only "starring" or liking the song on another service works
                             var starredTracks = await client.Browsing.GetStarredAsync();
                             tracks = starredTracks.Starred.Song.ToList();
                         }

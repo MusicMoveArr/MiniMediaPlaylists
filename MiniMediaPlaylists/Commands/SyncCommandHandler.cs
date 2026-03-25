@@ -136,6 +136,8 @@ public class SyncCommandHandler
                                         });
                                     }
                                     
+                                    await RateTrackAsync(syncConfiguration, fromTrack, toTrack, false, false);
+                                    
                                     task.Value++;
                                     task.Description(Markup.Escape(Markup.Escape($"Processing Playlist '{fromPlaylist.Name}', {task.Value} of {fromTracks.Count} processed")));
                                     return;
@@ -152,6 +154,8 @@ public class SyncCommandHandler
 
                             if (foundTrack != null && toTracks.Any(x => x.Id == foundTrack.Id))
                             {
+                                await RateTrackAsync(syncConfiguration, fromTrack, foundTrack, false, false);
+                                
                                 task.Value++;
                                 task.Description(Markup.Escape(Markup.Escape($"Processing Playlist '{fromPlaylist.Name}', {task.Value} of {fromTracks.Count} processed")));
                                 return;
@@ -196,6 +200,8 @@ public class SyncCommandHandler
                             
                             if (foundTrack != null && toTracks.Any(x => x.Id == foundTrack.Id))
                             {
+                                await RateTrackAsync(syncConfiguration, fromTrack, foundTrack, foundWithDeepSearch, false);
+                                
                                 task.Value++;
                                 task.Description(Markup.Escape(Markup.Escape($"Processing Playlist '{fromPlaylist.Name}', {task.Value} of {fromTracks.Count} processed")));
                                 return;
@@ -214,11 +220,8 @@ public class SyncCommandHandler
                                         NewPlaylistSortOrder = fromTrack.PlaylistSortOrder
                                     });
                                 }
-                                
-                                if (fromTrack.LikeRating > 0 && await _toProvider.RateTrackAsync(syncConfiguration.ToName, foundTrack, fromTrack.LikeRating))
-                                {
-                                    AnsiConsole.WriteLine(Markup.Escape($"Rated song with rating '{fromTrack.LikeRating}' '{foundTrack.ArtistName} - {foundTrack.AlbumName} - {foundTrack.Title}' {(foundWithDeepSearch ? "found with deep search" : "")}"));
-                                }
+
+                                await RateTrackAsync(syncConfiguration, fromTrack, foundTrack, foundWithDeepSearch, true);
 
                                 if (isLikePlaylist)
                                 {
@@ -260,6 +263,22 @@ public class SyncCommandHandler
                     totalProgressTask.Description(Markup.Escape($"Processing Playlists {totalProgressTask.Value} of {fromPlaylists.Count} processed"));
                 });
             });
+    }
+
+    private async Task RateTrackAsync(
+        SyncConfiguration syncConfiguration,
+        GenericTrack fromTrack, 
+        GenericTrack? foundTrack,
+        bool foundWithDeepSearch,
+        bool overwriteExistingRating)
+    {
+        if (foundTrack != null &&
+            fromTrack.LikeRating > 0 && 
+            (overwriteExistingRating || foundTrack.LikeRating == 0) &&
+            await _toProvider.RateTrackAsync(syncConfiguration.ToName, foundTrack, fromTrack.LikeRating))
+        {
+            AnsiConsole.WriteLine(Markup.Escape($"Rated song with rating '{fromTrack.LikeRating}' '{foundTrack.ArtistName} - {foundTrack.AlbumName} - {foundTrack.Title}' {(foundWithDeepSearch ? "found with deep search" : "")}"));
+        }
     }
     
     private async Task FixPlaylistTrackOrderingAsync(

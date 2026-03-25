@@ -18,19 +18,20 @@
 
     <ItemGroup>
       <PackageReference Include="CliFx" Version="2.3.6" />
-      <PackageReference Include="Dapper" Version="2.1.66" />
+      <PackageReference Include="Dapper" Version="2.1.72" />
       <PackageReference Include="Dapper.Bulk" Version="1.6.0" />
       <PackageReference Include="DapperBulkQueries.Common" Version="1.9001.512" />
       <PackageReference Include="DapperBulkQueries.Npgsql" Version="1.9001.512" />
-      <PackageReference Include="dbup-postgresql" Version="6.1.5" />
+      <PackageReference Include="dbup-postgresql" Version="7.0.1" />
       <PackageReference Include="FuzzySharp" Version="2.0.2" />
-      <PackageReference Include="Npgsql" Version="9.0.4" />
-      <PackageReference Include="Polly" Version="8.6.4" />
-      <PackageReference Include="Quartz" Version="3.15.1" />
-      <PackageReference Include="RestSharp" Version="112.1.0" />
+      <PackageReference Include="Npgsql" Version="10.0.2" />
+      <PackageReference Include="Polly" Version="8.6.6" />
+      <PackageReference Include="Quartz" Version="3.16.1" />
+      <PackageReference Include="RestSharp" Version="114.0.0" />
       <PackageReference Include="Spectre.Console" Version="0.54.0" />
-      <PackageReference Include="SpotifyAPI.Web" Version="7.2.1" />
+      <PackageReference Include="SpotifyAPI.Web" Version="7.4.2" />
       <PackageReference Include="SubSonicMedia" Version="1.0.5" />
+      <PackageReference Include="System.Runtime.Caching" Version="10.0.5" />
     </ItemGroup>
 
     <ItemGroup>

@@ -3,7 +3,6 @@ using MiniMediaPlaylists.Helpers;
 using MiniMediaPlaylists.Interfaces;
 using MiniMediaPlaylists.Models;
 using MiniMediaPlaylists.Repositories;
-using Spectre.Console;
 using SubSonicMedia;
 using SubSonicMedia.Models;
 
@@ -66,7 +65,6 @@ public class SubSonicService : IProviderService
         using var client = new SubsonicClient(connection);
 
         string searchQuery = $"{artist} {title}".Replace("-", string.Empty);
-        
         var response = await client.Search.Search3Async(searchQuery, songCount: 200);
 
         return response.SearchResult.Songs
@@ -208,7 +206,8 @@ public class SubSonicService : IProviderService
                 _ => rating
             };
             
-            await client.Annotation.SetRatingAsync(track.Id, (int)rating);
+            var response = await client.Annotation.SetRatingAsync(track.Id, (int)rating);
+            return response.IsSuccess;
         }
         
         return false;
