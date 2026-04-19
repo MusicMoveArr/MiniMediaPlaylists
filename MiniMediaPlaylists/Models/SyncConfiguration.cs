@@ -41,4 +41,5 @@ public class SyncConfiguration
     public required int TrackThreads { get; init; }
     public required bool SyncTrackOrder { get; init; }
     public required bool SecondSearchWithoutAlbum { get; init; }
+    public required bool OverwriteExistingRating { get; init; }
 }

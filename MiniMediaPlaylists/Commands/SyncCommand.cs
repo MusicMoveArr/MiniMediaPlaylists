@@ -196,6 +196,12 @@ public class SyncPlexCommand : ICommand
         IsRequired = false,
         EnvironmentVariable = "SYNC_SECOND_SEARCH_WITHOUT_ALBUM")]
     public bool SecondSearchWithoutAlbum { get; init; } = false;
+    
+    [CommandOption("overwrite-existing-rating",
+        Description = "Overwrite existing track ratings From>To Service.",
+        IsRequired = false,
+        EnvironmentVariable = "SYNC_OVERWRITE_EXISTING_RATING")]
+    public bool OverwriteExistingRating { get; init; } = false;
 
     public async ValueTask ExecuteAsync(IConsole console)
     {
@@ -233,7 +239,8 @@ public class SyncPlexCommand : ICommand
             PlaylistThreads = PlaylistThreads,
             TrackThreads = TrackThreads,
             SyncTrackOrder = SyncTrackOrder,
-            SecondSearchWithoutAlbum = SecondSearchWithoutAlbum
+            SecondSearchWithoutAlbum = SecondSearchWithoutAlbum,
+            OverwriteExistingRating = OverwriteExistingRating
         };
 
         await handler.SyncPlaylists(syncConfig);

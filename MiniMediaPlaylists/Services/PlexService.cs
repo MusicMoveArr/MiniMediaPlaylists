@@ -66,7 +66,7 @@ public class PlexService : IProviderService
             
             foundTracks.AddRange(albumTracks.MediaContainer?.Metadata?
                 .Where(track => track.Type == "track")
-                .Select(track => new GenericTrack(track.RatingKey, track.Title, track.GrandparentTitle, track.ParentTitle)));
+                .Select(track => new GenericTrack(track.RatingKey, track.Title, track.GrandparentTitle, track.ParentTitle, 0, track.UserRating)));
         }
         
         foundTracks.AddRange(response?.MediaContainer?.SearchResult
@@ -75,7 +75,9 @@ public class PlexService : IProviderService
                 track.Metadata.RatingKey, 
                 track.Metadata.Title, 
                 track.Metadata.GrandparentTitle, 
-                track.Metadata.ParentTitle)) ?? []);
+                track.Metadata.ParentTitle,
+                0,
+                track.Metadata.UserRating)) ?? []);
         
         return foundTracks
             .Where(track => !string.IsNullOrWhiteSpace(track.Id))
@@ -115,7 +117,7 @@ public class PlexService : IProviderService
                 
                 foundTracks.AddRange(tracks.MediaContainer?.Metadata?
                     .Where(track => track.Type == "track")
-                    .Select(track => new GenericTrack(track.RatingKey, track.Title, track.GrandparentTitle, track.ParentTitle))
+                    .Select(track => new GenericTrack(track.RatingKey, track.Title, track.GrandparentTitle, track.ParentTitle, 0, track.UserRating))
                     .ToList());
             }
             
@@ -139,7 +141,7 @@ public class PlexService : IProviderService
                 
                     foundTracks.AddRange(tracks.MediaContainer?.Metadata?
                         .Where(track => track.Type == "track")
-                        .Select(track => new GenericTrack(track.RatingKey, track.Title, track.GrandparentTitle, track.ParentTitle))
+                        .Select(track => new GenericTrack(track.RatingKey, track.Title, track.GrandparentTitle, track.ParentTitle, 0, track.UserRating))
                         .ToList());
                 }
             }

@@ -70,7 +70,8 @@ public class SubSonicService : IProviderService
         return response.SearchResult.Songs
             .Select(track => new GenericTrack(track.Id, track.Title, track.Artist, track.Album)
             {
-                AlbumArtist = track.Path.Split('/').FirstOrDefault()
+                AlbumArtist = track.Path.Split('/').FirstOrDefault(),
+                LikeRating = track.UserRating ?? 0
             })
             .ToList();
     }

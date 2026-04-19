@@ -82,6 +82,13 @@ public class SyncCommandHandler
                 int playlistProgress = 0;
                 await ParallelHelper.ForEachAsync(fromPlaylists, syncConfiguration.PlaylistThreads, async fromPlaylist =>
                 {
+                    var fromTracks = await _fromProvider.GetPlaylistTracksAsync(syncConfiguration.FromName, fromPlaylist.Id, fromSnapshotId);
+
+                    if (!fromTracks.Any())
+                    {
+                        return;
+                    }
+                    
                     var toPlayList = toPlaylists.FirstOrDefault(playlist => 
                         string.Equals(playlist.Name, syncConfiguration.ToPlaylistPrefix + fromPlaylist.Name));
 
@@ -92,14 +99,13 @@ public class SyncCommandHandler
                         return;
                     }
                     
-                    if (toPlayList == null)
+                    if (toPlayList == null && !isLikePlaylist)
                     {
                         //create non-existing playlist on "to" service
                         toPlayList = await _toProvider.CreatePlaylistAsync(syncConfiguration.ToName,
                             syncConfiguration.ToPlaylistPrefix + fromPlaylist.Name);
                     }
 
-                    var fromTracks = await _fromProvider.GetPlaylistTracksAsync(syncConfiguration.FromName, fromPlaylist.Id, fromSnapshotId);
                     var toTracks =
                         isLikePlaylist ? await _toProvider.GetPlaylistTracksByNameAsync(syncConfiguration.ToName, syncConfiguration.ToLikePlaylistName, toSnapshotId) :
                         await _toProvider.GetPlaylistTracksAsync(syncConfiguration.ToName, toPlayList.Id, toSnapshotId);
@@ -221,7 +227,7 @@ public class SyncCommandHandler
                                     });
                                 }
 
-                                await RateTrackAsync(syncConfiguration, fromTrack, foundTrack, foundWithDeepSearch, true);
+                                await RateTrackAsync(syncConfiguration, fromTrack, foundTrack, foundWithDeepSearch, syncConfiguration.OverwriteExistingRating);
 
                                 if (isLikePlaylist)
                                 {
@@ -247,14 +253,14 @@ public class SyncCommandHandler
                         }
                         catch (Exception e)
                         {
-                            AnsiConsole.WriteLine(Markup.Escape($"Error: '{e.Message}' on playlist '{toPlayList.Name}'"));
+                            AnsiConsole.WriteLine(Markup.Escape($"Error: '{e.Message}' on playlist '{toPlayList?.Name}'"));
                         }
 
                         task.Value++;
                         task.Description(Markup.Escape(Markup.Escape($"Processing Playlist '{fromPlaylist.Name}', {task.Value} of {fromTracks.Count} processed")));
                     });
 
-                    if (syncConfiguration.SyncTrackOrder && !isLikePlaylist && toPlayList.CanSortTracks)
+                    if (syncConfiguration.SyncTrackOrder && !isLikePlaylist && toPlayList?.CanSortTracks == true)
                     {
                         await FixPlaylistTrackOrderingAsync(updatePlaylistTrackOrders, syncConfiguration, fromTracks, toPlayList);
                     }
