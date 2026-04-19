@@ -41,6 +41,7 @@ public class PullTidalCommandHandler
                 Console.WriteLine("Authentication failed...");
                 return;
             }
+            owner = await _tidalRepository.GetOwnerByNameAsync(ownerName);
         }
         
         await tidalApiService.AuthenticateWithRefreshTokenAsync(owner.AuthRefreshToken);
@@ -81,15 +82,15 @@ public class PullTidalCommandHandler
                             owner.Id,
                             $"https://listen.tidal.com/playlist/{playlist.Id}",
                             playlist.Attributes.Name,
-                            playlist.Attributes.Description,
+                            playlist.Attributes.Description ?? string.Empty,
                             playlist.Attributes.Bounded,
                             string.IsNullOrWhiteSpace(playlist.Attributes.Duration) ? string.Empty : playlist.Attributes.Duration,
                             playlist.Attributes.NumberOfItems,
                             playlist.Attributes.CreatedAt,
                             playlist.Attributes.LastModifiedAt,
-                            playlist.Attributes.Privacy,
-                            playlist.Attributes.AccessType,
-                            playlist.Attributes.PlaylistType,
+                            playlist.Attributes.Privacy ?? string.Empty,
+                            playlist.Attributes.AccessType ?? string.Empty,
+                            playlist.Attributes.PlaylistType ?? string.Empty,
                             snapshotId);
 
                         var playlistInfo = await tidalApiService.GetPlaylistByIdAsync(playlist.Id);
@@ -102,13 +103,14 @@ public class PullTidalCommandHandler
                         foreach (var track in tracks)
                         {
                             var trackInfo = await tidalApiService.GetTrackByIdAsync(track.Id);
-                            var album = trackInfo.Included.FirstOrDefault(album => album.Type == "albums");
-                            var artists = trackInfo.Included
+                            var album = trackInfo?.Included?.FirstOrDefault(album => album.Type == "albums");
+                            var artists = trackInfo?.Included?
                                 .Where(artist => artist.Type == "artists")
                                 .ToList();
 
-                            if (album == null || !artists.Any())
+                            if (album == null || artists?.Any() == false)
                             {
+                                task.Increment(1);
                                 continue;
                             }
 
