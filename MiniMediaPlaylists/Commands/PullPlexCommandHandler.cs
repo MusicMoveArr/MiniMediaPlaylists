@@ -35,6 +35,14 @@ public class PullPlexCommandHandler
     {
         PlexApiService plexApiService = new PlexApiService();
         var playlists = await plexApiService.GetPlaylistsAsync(serverUrl, token);
+        if (playlists != null)
+        {
+            playlists.MediaContainer.Metadata =
+                playlists.MediaContainer.Metadata
+                    .Where(playlist => playlist.PlaylistType == "audio")
+                    .ToList();
+        }
+
 
         var serverId = await _plexRepository.UpsertServerAsync(serverUrl);
         Guid snapshotId = await _snapshotRepository.CreateSnapshotAsync(serverId, "Plex");
@@ -118,12 +126,12 @@ public class PullPlexCommandHandler
                                  Type = track.Type,
                                  Title = track.Title,
                                  Guid = track.Guid,
-                                 ParentStudio = !string.IsNullOrWhiteSpace(track.ParentStudio) ? track.ParentStudio : string.Empty,
+                                 ParentStudio = track.ParentStudio ?? string.Empty,
                                  LibrarySectionTitle = track.LibrarySectionTitle,
                                  LibrarySectionId = track.LibrarySectionId,
-                                 GrandParentTitle = track.GrandparentTitle,
+                                 GrandParentTitle = track.GrandparentTitle ?? string.Empty,
                                  UserRating = track.UserRating,
-                                 ParentTitle = !string.IsNullOrWhiteSpace(track.ParentTitle) ? track.ParentTitle : string.Empty,
+                                 ParentTitle = track.ParentTitle ?? string.Empty,
                                  ParentYear = track.ParentYear,
                                  MusicAnalysisVersion = !string.IsNullOrWhiteSpace(track.MusicAnalysisVersion) ? int.Parse(track.MusicAnalysisVersion) : 0,
                                  MediaId = track.Media.First().Id,
