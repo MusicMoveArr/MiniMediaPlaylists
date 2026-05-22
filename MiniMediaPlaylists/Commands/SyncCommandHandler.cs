@@ -15,6 +15,7 @@ public class SyncCommandHandler
     private IProviderService _toProvider;
     private readonly SnapshotRepository _snapshotRepository;
     private const int MaxMovingPlaylistTracksLoop = 10;
+    public const string RatedTracksPlaylistId = "#RatedTracks";
     
     public SyncCommandHandler(string connectionString)
     {
@@ -93,13 +94,14 @@ public class SyncCommandHandler
                         string.Equals(playlist.Name, syncConfiguration.ToPlaylistPrefix + fromPlaylist.Name));
 
                     bool isLikePlaylist = string.Equals(fromPlaylist.Name, syncConfiguration.FromLikePlaylistName);
-                    
-                    if (toPlayList?.CanAddTracks == false && !isLikePlaylist)
+                    bool isRatingPlaylist = string.Equals(fromPlaylist.Id, RatedTracksPlaylistId);
+
+                    if (toPlayList?.CanAddTracks == false && !isLikePlaylist && !isRatingPlaylist)
                     {
                         return;
                     }
                     
-                    if (toPlayList == null && !isLikePlaylist)
+                    if (toPlayList == null && !isLikePlaylist && !isRatingPlaylist)
                     {
                         //create non-existing playlist on "to" service
                         toPlayList = await _toProvider.CreatePlaylistAsync(syncConfiguration.ToName,
@@ -240,7 +242,7 @@ public class SyncCommandHandler
                                         AnsiConsole.WriteLine(Markup.Escape($"Failed to like the song, '{foundTrack.ArtistName} - {foundTrack.AlbumName} - {foundTrack.Title}'"));
                                     }
                                 }
-                                else
+                                else if(!isRatingPlaylist)
                                 {
                                     await _toProvider.AddTrackToPlaylistAsync(syncConfiguration.ToName, toPlayList.Id, foundTrack);
                                     AnsiConsole.WriteLine(Markup.Escape($"Added song to playlist '{foundTrack.ArtistName} - {foundTrack.AlbumName} - {foundTrack.Title}' {(foundWithDeepSearch ? "found with deep search" : "")}"));

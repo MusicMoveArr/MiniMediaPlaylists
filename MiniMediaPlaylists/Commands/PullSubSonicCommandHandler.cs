@@ -76,12 +76,24 @@ public class PullSubSonicCommandHandler
 
                 string genLikedPlaylistName = string.Empty;
                 
+                playlists.Playlists.Playlist.Insert(0, new PlaylistSummary
+                {
+                    Changed = DateTime.Now,
+                    Created = DateTime.Now,
+                    Duration = 0,
+                    Id = SyncCommandHandler.RatedTracksPlaylistId,
+                    Name = "RatedTracks",
+                    Public = false,
+                    SongCount = 0
+                });
+                
                 if (!string.IsNullOrWhiteSpace(likedSongsPlaylistName))
                 {
-                    string uniqueHashId =
+                    string uniqueHashId = 
                         BitConverter.ToString(SHA256.Create()
                             .ComputeHash(Encoding.UTF8.GetBytes(likedSongsPlaylistName)))
-                            .Replace("-", string.Empty);
+                            .Replace("-", string.Empty)
+                            .Substring(0, 20);
                     
                     genLikedPlaylistName = $"#{uniqueHashId}";
                     playlists.Playlists.Playlist.Insert(0, new PlaylistSummary
@@ -121,6 +133,27 @@ public class PullSubSonicCommandHandler
                         {
                             var starredTracks = await client.Browsing.GetStarredAsync();
                             tracks = starredTracks.Starred.Song.ToList();
+                        }
+                        else if (string.Equals(playlist.Id, SyncCommandHandler.RatedTracksPlaylistId))
+                        {
+                            int limit = 100000000;
+                            int songOffset = 0;
+                            int bulkSearch = 5000;
+
+                            while (songOffset < limit)
+                            {
+                                var searchedTracks = await client.Search.Search3Async("\"\"", 
+                                    songCount: bulkSearch, 
+                                    songOffset: songOffset, 
+                                    albumCount: 0, 
+                                    artistCount: 0);
+                                tracks.AddRange(searchedTracks.SearchResult.Songs.Where(song => song.UserRating > 0));
+                                songOffset += bulkSearch;
+                                if (!searchedTracks.SearchResult.Songs.Any())
+                                {
+                                    break;
+                                }
+                            }
                         }
                         else
                         {
