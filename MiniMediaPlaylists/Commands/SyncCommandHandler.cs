@@ -16,6 +16,7 @@ public class SyncCommandHandler
     private readonly SnapshotRepository _snapshotRepository;
     private const int MaxMovingPlaylistTracksLoop = 10;
     public const string RatedTracksPlaylistId = "#RatedTracks";
+    private readonly AsyncLock _asyncCreatePlaylistLock = new AsyncLock();
     
     public SyncCommandHandler(string connectionString)
     {
@@ -84,28 +85,54 @@ public class SyncCommandHandler
                 await ParallelHelper.ForEachAsync(fromPlaylists, syncConfiguration.PlaylistThreads, async fromPlaylist =>
                 {
                     var fromTracks = await _fromProvider.GetPlaylistTracksAsync(syncConfiguration.FromName, fromPlaylist.Id, fromSnapshotId);
-
                     if (!fromTracks.Any())
                     {
                         return;
                     }
-                    
-                    var toPlayList = toPlaylists.FirstOrDefault(playlist => 
-                        string.Equals(playlist.Name, syncConfiguration.ToPlaylistPrefix + fromPlaylist.Name));
 
-                    bool isLikePlaylist = string.Equals(fromPlaylist.Name, syncConfiguration.FromLikePlaylistName);
-                    bool isRatingPlaylist = string.Equals(fromPlaylist.Id, RatedTracksPlaylistId);
-
-                    if (toPlayList?.CanAddTracks == false && !isLikePlaylist && !isRatingPlaylist)
-                    {
-                        return;
-                    }
+                    GenericPlaylist? toPlayList = null;
+                    bool isLikePlaylist = false;
+                    bool isRatingPlaylist = false;
                     
-                    if (toPlayList == null && !isLikePlaylist && !isRatingPlaylist)
+                    using (await _asyncCreatePlaylistLock.LockAsync())
                     {
-                        //create non-existing playlist on "to" service
-                        toPlayList = await _toProvider.CreatePlaylistAsync(syncConfiguration.ToName,
-                            syncConfiguration.ToPlaylistPrefix + fromPlaylist.Name);
+                        if (!string.IsNullOrWhiteSpace(syncConfiguration.ToPlaylistName))
+                        {
+                            toPlayList = toPlaylists.FirstOrDefault(playlist => 
+                                string.Equals(playlist.Name, syncConfiguration.ToPlaylistPrefix + syncConfiguration.ToPlaylistName));
+                        }
+                        else
+                        {
+                            toPlayList = toPlaylists.FirstOrDefault(playlist => 
+                                string.Equals(playlist.Name, syncConfiguration.ToPlaylistPrefix + fromPlaylist.Name));
+                        }
+
+                        isLikePlaylist = string.Equals(fromPlaylist.Name, syncConfiguration.FromLikePlaylistName);
+                        isRatingPlaylist = string.Equals(fromPlaylist.Id, RatedTracksPlaylistId);
+
+                        if (toPlayList?.CanAddTracks == false && !isLikePlaylist && !isRatingPlaylist)
+                        {
+                            return;
+                        }
+                        
+                        if (toPlayList == null && !isLikePlaylist && !isRatingPlaylist)
+                        {
+                            //create non-existing playlist on "to" service
+                            if (!string.IsNullOrWhiteSpace(syncConfiguration.ToPlaylistName))
+                            {
+                                toPlayList = await _toProvider.CreatePlaylistAsync(syncConfiguration.ToName,
+                                    syncConfiguration.ToPlaylistPrefix + syncConfiguration.ToPlaylistName);
+                            }
+                            else
+                            {
+                                toPlayList = await _toProvider.CreatePlaylistAsync(syncConfiguration.ToName,
+                                    syncConfiguration.ToPlaylistPrefix + fromPlaylist.Name);
+                            }
+
+                            toPlayList.CanAddTracks = true;
+                            toPlayList.CanSortTracks = true;
+                            toPlaylists.Add(toPlayList);
+                        }
                     }
 
                     var toTracks =
